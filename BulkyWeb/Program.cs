@@ -1,7 +1,13 @@
+using BulkyWeb;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Environment
+//var environment = builder.Configuration["ASPNETCORE_ENVIRONMENT"];
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddInfrastructure(configuration: builder.Configuration);
 
 var app = builder.Build();
 
@@ -19,9 +25,11 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
+app.UseSession();
 
+app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
