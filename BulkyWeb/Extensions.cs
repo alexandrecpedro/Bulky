@@ -17,6 +17,7 @@ public static class Extensions
             services.AddDbContext(configuration: configuration);
         }
 
+        services.AddRazorPages();
         //services.ConfigureStripe(configuration: configuration);
         services.ConfigureIdentity();
         //services.ConfigureAuthentication(configuration: configuration);
