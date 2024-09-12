@@ -9,9 +9,12 @@
         </tr>
     </thead>
     <tbody>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
+        @foreach(var obj in Model.OrderBy(u => u.DisplayOrder))
+        {   
+            <tr>
+                <td>@obj.Name</td>
+                <td>@obj.DisplayOrder</td>
+            </tr>
+        }
     </tbody>
 </table>

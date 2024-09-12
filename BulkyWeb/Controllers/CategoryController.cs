@@ -14,6 +14,6 @@ public class CategoryController : Controller
     public IActionResult Index()
     {
         List<Category> objCategoryList = _db.Categories.ToList();
-        return View();
+        return View(objCategoryList);
     }
 }
