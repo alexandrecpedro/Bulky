@@ -33,3 +33,10 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+//async Task SeedDatabase()
+//{
+//    using var scope = app.Services.CreateScope();
+//    var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+//    dbInitializer.Initialize();
+//}
