@@ -25,11 +25,21 @@ public class CategoryController : Controller
         return View(objCategoryList);
     }
 
+    public IActionResult Create()
+    {
+        return View();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
-        await _db.Categories.AddAsync(category);
-        await _db.SaveChangesAsync();
-        return RedirectToAction("Index");
+        if (ModelState.IsValid)
+        {
+            await _db.Categories.AddAsync(category);
+            await _db.SaveChangesAsync();
+            return RedirectToAction("Index");
+        }
+
+        return View();
     }
 }
