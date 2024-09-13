@@ -13,7 +13,7 @@ public class CategoryController : Controller
     }
     public IActionResult Index()
     {
-        List<Category> objCategoryList = _db.Categories.ToList();
+        List<Category> objCategoryList = [.. _db.Categories];
         return View(objCategoryList);
     }
 
