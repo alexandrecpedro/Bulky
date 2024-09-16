@@ -60,6 +60,7 @@ public class CategoryController : Controller
         Category? categoryFromDb = await _db.Categories.FindAsync(id);
         //Category? categoryFromDb1 = _db.Categories.FirstOrDefault(u=>u.Id==id);
         //Category? categoryFromDb2 = _db.Categories.Where(u=>u.Id==id).FirstOrDefault();
+
         if (categoryFromDb == null)
         {
             return NotFound();
@@ -86,5 +87,36 @@ public class CategoryController : Controller
         }
 
         return View();
+    }
+
+    public async Task<IActionResult> Delete(int? id)
+    {
+        if (id == null || id == 0)
+        {
+            return NotFound();
+        }
+        Category? categoryFromDb = await _db.Categories.FindAsync(id);
+        //Category? categoryFromDb1 = _db.Categories.FirstOrDefault(u=>u.Id==id);
+        //Category? categoryFromDb2 = _db.Categories.Where(u=>u.Id==id).FirstOrDefault();
+
+        if (categoryFromDb == null)
+        {
+            return NotFound();
+        }
+        return View(categoryFromDb);
+    }
+
+    [HttpPost, ActionName("Delete")]
+    public async Task<IActionResult> DeletePOST(int? id)
+    {
+        Category? categoryFromDb = await _db.Categories.FindAsync(id);
+        if (categoryFromDb == null)
+        {
+            return NotFound();
+        }
+
+        _db.Categories.Remove(categoryFromDb);
+        await _db.SaveChangesAsync();
+        return RedirectToAction("Index");
     }
 }
