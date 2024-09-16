@@ -24,10 +24,11 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPost()
     {
-        _logger.LogInformation("Starting creating a category");
+        _logger.LogInformation("Start creating a category");
 
         await _db.Categories.AddAsync(Category);
         await _db.SaveChangesAsync();
+        TempData["success"] = "Category created successfully";
         return RedirectToPage("Index");
     }
 }
