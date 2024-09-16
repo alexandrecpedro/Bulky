@@ -67,7 +67,7 @@ public class CategoryController : Controller
         return View(categoryFromDb);
     }
 
-    [HttpPut]
+    [HttpPost]
     public async Task<IActionResult> Edit(Category category)
     {
         if (category.Name == category.DisplayOrder.ToString())
@@ -80,7 +80,7 @@ public class CategoryController : Controller
         //}
         if (ModelState.IsValid)
         {
-            await _db.Categories.AddAsync(category);
+            _db.Categories.Update(category);
             await _db.SaveChangesAsync();
             return RedirectToAction("Index");
         }
