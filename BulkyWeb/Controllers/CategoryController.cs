@@ -45,6 +45,7 @@ public class CategoryController : Controller
         {
             await _db.Categories.AddAsync(category);
             await _db.SaveChangesAsync();
+            TempData["success"] = "Category created successfully!";
             return RedirectToAction("Index");
         }
 
@@ -83,6 +84,7 @@ public class CategoryController : Controller
         {
             _db.Categories.Update(category);
             await _db.SaveChangesAsync();
+            TempData["success"] = "Category updated successfully!";
             return RedirectToAction("Index");
         }
 
@@ -117,6 +119,7 @@ public class CategoryController : Controller
 
         _db.Categories.Remove(categoryFromDb);
         await _db.SaveChangesAsync();
+        TempData["success"] = "Category deleted successfully";
         return RedirectToAction("Index");
     }
 }
