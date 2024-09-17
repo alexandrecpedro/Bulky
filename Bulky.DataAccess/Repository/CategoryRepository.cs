@@ -13,11 +13,6 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
         _db = db;
     }
 
-    public async Task Save()
-    {
-        await _db.SaveChangesAsync();
-    }
-
     public void Update(Category category)
     {
         _db.Categories.Update(category);
