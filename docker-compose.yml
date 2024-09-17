@@ -6,12 +6,20 @@ services:
     environment:
       - ACCEPT_EULA="Y"
       # - SA_PASSWORD="P@ssw0rd"
-      - MSSQL_SA_PASSWORD="P@ssw0rd"
+      - MSSQL_SA_PASSWORD=P@ssw0rd
+      - MSSQL_USER=msuser
+      - MSSQL_PASSWORD=mspassword
       # - MSSQL_PID="Developer"
     ports:
       - "1433:1433"
     volumes:
       - my-volume:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P P@ssw0rd -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
 
 volumes:
   my-volume:

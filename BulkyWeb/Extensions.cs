@@ -1,22 +1,18 @@
-﻿using BulkyWeb.Data;
+﻿using Bulky.DataAccess;
+using Bulky.DataAccess.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
 namespace BulkyWeb;
 
 public static class Extensions
 {
-    public static void AddInfrastructure(
+    public static void AddExtensions(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
-        if (!configuration.IsTestEnvironment())
-        {
-            services.AddDbContext(configuration: configuration);
-        }
-
+        services.AddInfrastructure(configuration: configuration);
         services.AddRazorPages();
         //services.ConfigureStripe(configuration: configuration);
         services.ConfigureIdentity();
@@ -25,13 +21,7 @@ public static class Extensions
         services.AddSessionConfiguration();
         services.AddRateLimiter();
     }
-    public static void AddDbContext(this IServiceCollection services, IConfiguration configuration)
-    {
-        var DB_CONNECTION_STRING = configuration.GetConnectionString("DefaultConnection");
-
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString: DB_CONNECTION_STRING));
-    }
+    
 
     public static bool IsTestEnvironment(this IConfiguration configuration)
         => configuration.GetValue<bool>("InMemoryTest");

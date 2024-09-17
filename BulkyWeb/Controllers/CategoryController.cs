@@ -1,5 +1,5 @@
-﻿using BulkyWeb.Data;
-using BulkyWeb.Models;
+﻿using Bulky.DataAccess.Data;
+using Bulky.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +16,9 @@ public class CategoryController : Controller
     }
     public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
-        List<Category> objCategoryList = await _db.Categories
+        _logger.LogInformation("Start searching categories");
+
+        var objCategoryList = await _db.Categories
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .AsNoTracking()
@@ -33,6 +35,8 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
+        _logger.LogInformation("Start creating a category");
+
         if (category.Name == category.DisplayOrder.ToString())
         {
             ModelState.AddModelError("name", "The DisplayOrder cannot exactly match the Name!");
@@ -54,6 +58,8 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Edit(int? id)
     {
+        _logger.LogInformation("Start searching a category by id");
+
         if (id == null || id == 0)
         {
             return NotFound();
@@ -72,6 +78,8 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(Category category)
     {
+        _logger.LogInformation("Start updating a category");
+
         if (category.Name == category.DisplayOrder.ToString())
         {
             ModelState.AddModelError("name", "The DisplayOrder cannot exactly match the Name!");
@@ -93,6 +101,8 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Delete(int? id)
     {
+        _logger.LogInformation("Start searching a category by id");
+
         if (id == null || id == 0)
         {
             return NotFound();
@@ -111,6 +121,8 @@ public class CategoryController : Controller
     [HttpPost, ActionName("Delete")]
     public async Task<IActionResult> DeletePOST(int? id)
     {
+        _logger.LogInformation("Start deleting a category");
+
         Category? categoryFromDb = await _db.Categories.FindAsync(id);
         if (categoryFromDb == null)
         {
