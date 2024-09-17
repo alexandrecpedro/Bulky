@@ -1,28 +1,19 @@
-﻿using Bulky.DataAccess.Data;
+﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BulkyWeb.Controllers;
 
 public class CategoryController : Controller
 {
-    private readonly ApplicationDbContext _db;
-    private readonly ILogger<CategoryController> _logger;
-    public CategoryController(ApplicationDbContext db, ILogger<CategoryController> logger)
+    private readonly ICategoryRepository _categoryRepo;
+    public CategoryController(ICategoryRepository db)
     {
-        _db = db;
-        _logger = logger;
+        _categoryRepo = db;
     }
     public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
-        _logger.LogInformation("Start searching categories");
-
-        var objCategoryList = await _db.Categories
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .AsNoTracking()
-            .ToListAsync();
+        var objCategoryList = _categoryRepo.GetAll();
 
         return View(objCategoryList);
     }
@@ -35,8 +26,6 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
-        _logger.LogInformation("Start creating a category");
-
         if (category.Name == category.DisplayOrder.ToString())
         {
             ModelState.AddModelError("name", "The DisplayOrder cannot exactly match the Name!");
@@ -47,8 +36,8 @@ public class CategoryController : Controller
         //}
         if (ModelState.IsValid)
         {
-            await _db.Categories.AddAsync(category);
-            await _db.SaveChangesAsync();
+            await _categoryRepo.Add(category);
+            await _categoryRepo.Save();
             TempData["success"] = "Category created successfully!";
             return RedirectToAction("Index");
         }
@@ -58,13 +47,11 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Edit(int? id)
     {
-        _logger.LogInformation("Start searching a category by id");
-
         if (id == null || id == 0)
         {
             return NotFound();
         }
-        Category? categoryFromDb = await _db.Categories.FindAsync(id);
+        Category? categoryFromDb = await _categoryRepo.Get(u => u.Id == id);
         //Category? categoryFromDb1 = _db.Categories.FirstOrDefault(u=>u.Id==id);
         //Category? categoryFromDb2 = _db.Categories.Where(u=>u.Id==id).FirstOrDefault();
 
@@ -78,7 +65,6 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(Category category)
     {
-        _logger.LogInformation("Start updating a category");
 
         if (category.Name == category.DisplayOrder.ToString())
         {
@@ -90,8 +76,8 @@ public class CategoryController : Controller
         //}
         if (ModelState.IsValid)
         {
-            _db.Categories.Update(category);
-            await _db.SaveChangesAsync();
+            _categoryRepo.Update(category);
+            await _categoryRepo.Save();
             TempData["success"] = "Category updated successfully!";
             return RedirectToAction("Index");
         }
@@ -101,13 +87,11 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Delete(int? id)
     {
-        _logger.LogInformation("Start searching a category by id");
-
         if (id == null || id == 0)
         {
             return NotFound();
         }
-        Category? categoryFromDb = await _db.Categories.FindAsync(id);
+        Category? categoryFromDb = await _categoryRepo.Get(u => u.Id == id);
         //Category? categoryFromDb1 = _db.Categories.FirstOrDefault(u=>u.Id==id);
         //Category? categoryFromDb2 = _db.Categories.Where(u=>u.Id==id).FirstOrDefault();
 
@@ -121,16 +105,14 @@ public class CategoryController : Controller
     [HttpPost, ActionName("Delete")]
     public async Task<IActionResult> DeletePOST(int? id)
     {
-        _logger.LogInformation("Start deleting a category");
-
-        Category? categoryFromDb = await _db.Categories.FindAsync(id);
+        Category? categoryFromDb = await _categoryRepo.Get(u => u.Id == id);
         if (categoryFromDb == null)
         {
             return NotFound();
         }
 
-        _db.Categories.Remove(categoryFromDb);
-        await _db.SaveChangesAsync();
+        _categoryRepo.Remove(categoryFromDb);
+        await _categoryRepo.Save();
         TempData["success"] = "Category deleted successfully";
         return RedirectToAction("Index");
     }

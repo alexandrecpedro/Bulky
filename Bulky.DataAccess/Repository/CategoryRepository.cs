@@ -6,7 +6,7 @@ namespace Bulky.DataAccess.Repository;
 
 public class CategoryRepository : Repository<Category>, ICategoryRepository
 {
-    private readonly ApplicationDbContext _db;
+    private ApplicationDbContext _db;
 
     public CategoryRepository(ApplicationDbContext db) : base(db)
     {
@@ -18,7 +18,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task Update(Category category)
+    public void Update(Category category)
     {
         _db.Categories.Update(category);
     }

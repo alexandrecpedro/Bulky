@@ -24,28 +24,28 @@ public class Repository<T> : IRepository<T> where T : class
 
     public async Task<T?> Get(Expression<Func<T, bool>> filter)
     {
-        IQueryable<T> query = dbSet.AsNoTracking();
+        IQueryable<T> query = dbSet;
         query = query.Where(filter);
-        return await query.FirstOrDefaultAsync();
+        return query.FirstOrDefault();
     }
 
-    public async Task<IEnumerable<T>> GetAll(int page = 1, int pageSize = 10)
+    public IEnumerable<T> GetAll(int page = 1, int pageSize = 10)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Max(pageSize, 10);
 
-        IEnumerable<T> query = dbSet.AsNoTracking();
+        IEnumerable<T> query = dbSet;
         query = query.Skip((page - 1) * pageSize)
             .Take(pageSize);
-        return await query.AsQueryable().ToListAsync();
+        return query.ToList();
     }
 
-    public async Task Remove(T entity)
+    public void Remove(T entity)
     {
         dbSet.Remove(entity);
     }
 
-    public async Task RemoveRange(IEnumerable<T> entity)
+    public void RemoveRange(IEnumerable<T> entity)
     {
         dbSet.RemoveRange(entity);
     }

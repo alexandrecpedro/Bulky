@@ -1,5 +1,7 @@
 ﻿using Bulky.DataAccess.Data;
 using Bulky.DataAccess.Extensions;
+using Bulky.DataAccess.Repository;
+using Bulky.DataAccess.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,8 +24,8 @@ public static class DependencyInjectionExtension
 
     private static void AddRepositories(IServiceCollection services)
     {
-        //services
-        //    .AddScoped<>();
+        services
+            .AddScoped<ICategoryRepository, CategoryRepository>();
     }
 
     public static void AddDbContext(this IServiceCollection services, IConfiguration configuration)
