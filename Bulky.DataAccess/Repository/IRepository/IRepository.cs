@@ -2,11 +2,11 @@
 
 namespace Bulky.DataAccess.Repository.IRepository;
 
-internal interface IRepository<T> where T : class
+public interface IRepository<T> where T : class
 {
-    IQueryable<T> GetAll(int? page, int? pageSize);
-    T Get(Expression<Func<T, bool>> filter);
-    void Add(T entity);
-    void Remove(T entity);
-    void RemoveRange(IEnumerable<T> entity);
+    Task<IEnumerable<T>> GetAll(int page = 1, int pageSize = 10);
+    Task<T?> Get(Expression<Func<T, bool>> filter);
+    Task Add(T entity);
+    Task Remove(T entity);
+    Task RemoveRange(IEnumerable<T> entity);
 }
