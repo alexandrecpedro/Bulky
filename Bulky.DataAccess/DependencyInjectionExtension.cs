@@ -18,7 +18,7 @@ public static class DependencyInjectionExtension
 
         if (!configuration.IsTestEnvironment())
         {
-            services.AddDbContext(configuration: configuration);
+            AddDbContext(services: services, configuration: configuration);
         }
     }
 
@@ -27,11 +27,14 @@ public static class DependencyInjectionExtension
         // Category
         services.AddScoped<ICategoryRepository, CategoryRepository>();
 
+        // Product
+        services.AddScoped<IProductRepository, ProductRepository>();
+
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
     }
 
-    public static void AddDbContext(this IServiceCollection services, IConfiguration configuration)
+    private static void AddDbContext(IServiceCollection services, IConfiguration configuration)
     {
         var DB_CONNECTION_STRING = configuration.GetConnectionString("DefaultConnection");
 

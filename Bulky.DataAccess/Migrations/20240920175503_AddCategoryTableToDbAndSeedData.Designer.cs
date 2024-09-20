@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bulky.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240917182053_AddCategoryTableToDbAndSeedData")]
+    [Migration("20240920175503_AddCategoryTableToDbAndSeedData")]
     partial class AddCategoryTableToDbAndSeedData
     {
         /// <inheritdoc />

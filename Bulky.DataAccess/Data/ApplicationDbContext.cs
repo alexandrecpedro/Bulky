@@ -1,4 +1,5 @@
-﻿using Bulky.Models;
+﻿using Bulky.DataAccess.Seeders;
+using Bulky.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bulky.DataAccess.Data;
@@ -11,13 +12,27 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Category> Categories { get; set; }
+    public DbSet<Product> Products { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Category>().HasData(
-            new Category { Id = 1, Name = "Action", DisplayOrder = 1 },
-            new Category { Id = 2, Name = "SciFi", DisplayOrder = 2 },
-            new Category { Id = 3, Name = "History", DisplayOrder = 3 }
-        );
+        base.OnModelCreating(modelBuilder);
+
+        SetDecimalConvention(modelBuilder: modelBuilder);
+
+        modelBuilder.ApplyConfiguration(configuration: new CategoriesSeeder());
+        modelBuilder.ApplyConfiguration(configuration: new ProductsSeeder());
+    }
+
+    private static void SetDecimalConvention(ModelBuilder modelBuilder)
+    {
+        var decimalProperties = modelBuilder.Model.GetEntityTypes()
+            .SelectMany(entityType => entityType.GetProperties())
+            .Where(property => property.ClrType.Equals(typeof(double)) || property.ClrType.Equals(typeof(double?)));
+
+        foreach (var property in decimalProperties)
+        {
+            property.SetColumnType("decimal(65,2)");
+        }
     }
 }
