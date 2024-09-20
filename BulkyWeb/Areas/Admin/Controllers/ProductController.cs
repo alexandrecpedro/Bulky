@@ -1,6 +1,8 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections.Generic;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -16,7 +18,12 @@ public class ProductController : Controller
     public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
         List<Product> objProductList = _unitOfWork.Product.GetAll().ToList();
-
+        IEnumerable<SelectListItem> CategoryList = _unitOfWork.Category
+            .GetAll().Select(u => new SelectListItem
+            {
+                Text = u.Name,
+                Value = u.Id.ToString(),
+            });
         return View(objProductList);
     }
 
