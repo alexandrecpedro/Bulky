@@ -103,56 +103,24 @@ The following tools were used in building the project:<br><br>
 <h2>🧪 How to use</h2>
   <ul &nbsp;>
     <li &nbsp;>Set the development environment at you local computer</li>
-    <li &nbsp;>Clone the repository</li>
-    ```bash
-      git clone https://github.com/alexandrecpedro/bulky-ecommerce
-    ```
-    <li &nbsp;>Build the project:</li>
-      ```bash
-        dotnet build
-      ```
-    <li &nbsp;>Run the project:</li>
-      ```bash
-        dotnet run
-      ```
-    <li><b>Testing</b>
-      <ul>
-        <li &nbsp;><u>Using Swagger documentation</u>
-          <ol>
-            <li &nbsp;>Enter the directory</li>
-              ```bash
-                cd BulkyWeb
-              ```
-            <li &nbsp;>Build the project</li>
-              ```bash
-                dotnet build
-              ```
-            <li &nbsp;>Run</li>
-              ```bash
-                dotnet run
-                <!-- Open in Browser:  -->
-                http://localhost:5259/swagger/index.html
-              ```
-          </ol>
-        </li>
-        <li &nbsp;><u>Frontend</u>
-          <ol>
-            <li &nbsp;>Enter the directory</li>
-              ```bash
-                cd BulkyWeb
-              ```
-            </li>
-            <li &nbsp;>Build the project</li>
-              ```bash
-                dotnet build
-              ```
-            <li &nbsp;>Run</li>
-              ```bash
-                dotnet run
-              ```
-          </ol>
-        </li>
-      </ul>
+    <li &nbsp;>Clone the repository
+      <pre>
+        <code>git clone https://github.com/alexandrecpedro/bulky-ecommerce</code>
+      </pre>
+    </li>
+    <li &nbsp;>Build the project:
+      <pre>
+        <code>dotnet build</code>
+      </pre>
+    </li>
+    <li &nbsp;>Run the project:
+      <pre>
+        <code>
+          dotnet run
+          <!-- Open Swagger in Browser:  -->
+          http://localhost:5259/swagger/index.html
+        </code>
+      </pre>
     </li>
   </ul>
 </div>
