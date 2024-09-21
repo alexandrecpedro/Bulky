@@ -26,7 +26,7 @@ public class Repository<T> : IRepository<T> where T : class
     {
         IQueryable<T> query = dbSet;
         query = query.Where(filter);
-        return query.FirstOrDefault();
+        return await query.FirstOrDefaultAsync();
     }
 
     public IEnumerable<T> GetAll(int page = 1, int pageSize = 10)
@@ -35,7 +35,15 @@ public class Repository<T> : IRepository<T> where T : class
         pageSize = Math.Max(pageSize, 10);
 
         IEnumerable<T> query = dbSet;
-        query = query.Skip((page - 1) * pageSize)
+        var idProperty = typeof(T).GetProperty("Id");
+
+        if (idProperty != null)
+        {
+            query = query.OrderBy(entity => idProperty.GetValue(entity));
+        }
+
+        query = query
+            .Skip((page - 1) * pageSize)
             .Take(pageSize);
         return query.ToList();
     }

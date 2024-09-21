@@ -12,9 +12,9 @@ public class CategoryController : Controller
     {
         _unitOfWork = unitOfWork;
     }
-    public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+    public IActionResult Index(int page = 1, int pageSize = 10)
     {
-        List<Category> objCategoryList = _unitOfWork.Category.GetAll().ToList();
+        List<Category> objCategoryList = _unitOfWork.Category.GetAll(page: page, pageSize: pageSize).ToList();
 
         return View(objCategoryList);
     }

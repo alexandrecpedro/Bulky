@@ -1,8 +1,8 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Collections.Generic;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -15,40 +15,57 @@ public class ProductController : Controller
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+    public IActionResult Index(int page = 1, int pageSize = 10)
     {
-        List<Product> objProductList = _unitOfWork.Product.GetAll().ToList();
+        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize).ToList();
         
         return View(objProductList);
     }
 
     public IActionResult Create()
     {
-        IEnumerable<SelectListItem> CategoryList = _unitOfWork.Category
-            .GetAll().Select(u => new SelectListItem
-            {
-                Text = u.Name,
-                Value = u.Id.ToString(),
-            });
+        ProductVM productVM = new()
+        {
+            CategoryList = _unitOfWork.Category
+                .GetAll().Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString()
+                }),
+            Product = new Product()
+        };
+        //IEnumerable<SelectListItem> CategoryList = _unitOfWork.Category
+        //    .GetAll().Select(u => new SelectListItem
+        //    {
+        //        Text = u.Name,
+        //        Value = u.Id.ToString(),
+        //    });
 
         //ViewBag.CategoryList = CategoryList;
-        ViewData["CategoryList"] = CategoryList;
+        //ViewData["CategoryList"] = CategoryList;
 
-        return View();
+        return View(productVM);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Product product)
+    public async Task<IActionResult> Create(ProductVM productVM)
     {
         if (ModelState.IsValid)
         {
-            await _unitOfWork.Product.Add(product);
+            await _unitOfWork.Product.Add(productVM.Product);
             await _unitOfWork.Save();
             TempData["success"] = "Product created successfully!";
             return RedirectToAction("Index");
         }
 
-        return View();
+        productVM.CategoryList = _unitOfWork.Category
+                .GetAll().Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString()
+                });
+
+        return View(productVM);
     }
 
     public async Task<IActionResult> Edit(int? id)
