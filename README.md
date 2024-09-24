@@ -50,6 +50,8 @@ The following tools were used in building the project:<br><br>
 |             Browser fonts (Frontend)             |        GOOGLE FONTS       |       https://fonts.google.com/                  |
 |           Graphic components (Frontend)          |           RAZOR           |    https://mudblazor.com/                  |
 | Low-level binary code executed in web (Frontend) |        WEB ASSEMBLY       |     https://webassembly.org/      |
+|       JavaScript table library (Frontend)        |         DATATABLES        |     https://datatables.net/      |
+|            Rich Text Editor (Frontend)           |          TINYMCE          |     https://www.tiny.cloud/      |
 |          Programming Language (Backend)          |          DOTNET           |  https://dotnet.microsoft.com/en-us/                  |
 |          Financial Infrastructure (Backend)      |          STRIPE           |  https://stripe.com/                  |
 | Email API and Email Marketing Campaigns (Backend) |         SENDGRID         |  https://stripe.com/                  |

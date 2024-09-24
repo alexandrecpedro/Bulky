@@ -3,6 +3,7 @@ using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Drawing.Printing;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -147,4 +148,20 @@ public class ProductController : Controller
         TempData["success"] = "Product deleted successfully!";
         return RedirectToAction("Index");
     }
+
+    #region API CALLS
+
+    [HttpGet]
+    public IActionResult GetAll(int page = 1, int pageSize = 10)
+    {
+        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
+
+        return Json(new { data = objProductList });
+
+        //$('#myTable').DataTable( {
+        //    ajax: '/api/myData'
+        //} );
+    }
+
+    #endregion
 }
