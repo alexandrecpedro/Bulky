@@ -62,7 +62,7 @@
                     <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
                 </article>
                 <article class="form-floating py-2 col-12">
-                    <input type="file" class="form-control border-0 shadow" />
+                    <input type="file" name="file" class="form-control border-0 shadow" />
                     <label asp-for="Product.ImageUrl" class="ms-2"></label>
                 </article>
 
@@ -89,11 +89,11 @@
 
 @section Scripts{
     <script>
-        tinymce.init({
-            selector: 'textarea',
-            plugins: 'anchor autolink charmap codesample emoticons  lists   table visualblocks wordcount',
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough |  align lineheight | numlist bullist indent outdent',
-        });
+        // tinymce.init({
+        //     selector: 'textarea',
+        //     plugins: 'anchor autolink charmap codesample emoticons  lists   table visualblocks wordcount',
+        //     toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough |  align lineheight | numlist bullist indent outdent',
+        // });
     </script>
     @{
         <partial name="_ValidationScriptsPartial" />

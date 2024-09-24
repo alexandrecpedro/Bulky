@@ -10,9 +10,11 @@ namespace BulkyWeb.Areas.Admin.Controllers;
 public class ProductController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
-    public ProductController(IUnitOfWork unitOfWork)
+    private readonly IWebHostEnvironment _webHostEnvironment;
+    public ProductController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
     {
         _unitOfWork = unitOfWork;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     public IActionResult Index(int page = 1, int pageSize = 10)
@@ -35,23 +37,22 @@ public class ProductController : Controller
             Product = new Product()
         };
 
-        // CREATE
-        if (id == null || id == 0)
-        {
-            return NotFound();
-        }
-
         // UPDATE
-        Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
-        //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
-        //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
-
-        if (productFromDb == null)
+        if (id != null && id >= 0)
         {
-            return NotFound();
+            Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
+            //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
+            //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
+
+            if (productFromDb == null)
+            {
+                return NotFound();
+            }
+
+            productVM.Product = productFromDb;
         }
 
-        productVM.Product = productFromDb;
+        // CREATE
         return View(productVM);
     }
 
@@ -60,7 +61,22 @@ public class ProductController : Controller
     {
         if (ModelState.IsValid)
         {
+            string wwwRootPath = _webHostEnvironment.WebRootPath;
             string successMessage;
+
+            if (file != null)
+            {
+                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                string productPath = Path.Combine(wwwRootPath, @"images\product");
+
+                string fileStreamPath = Path.Combine(productPath, fileName);
+                using (var fileStream = new FileStream(fileStreamPath, FileMode.Create))
+                {
+                    file.CopyTo(fileStream);
+                }
+
+                productVM.Product.ImageUrl = @$"\images\product\{fileName}";
+            }
 
             if (productVM.Product.Id == 0)
             {
