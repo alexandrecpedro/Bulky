@@ -21,8 +21,8 @@ public class HomeController : Controller
     {
         _logger.LogInformation("Starting product display...");
 
-        IEnumerable<Product> productList = await _unitOfWork.Product.GetAll();
-        return View();
+        IEnumerable<Product> productList = await _unitOfWork.Product.GetAll(includeProperties: "Category");
+        return View(productList);
     }
 
     public IActionResult Privacy()
