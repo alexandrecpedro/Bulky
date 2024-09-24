@@ -69,6 +69,18 @@ public class ProductController : Controller
                 string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
                 string productPath = Path.Combine(wwwRootPath, @"images\product");
 
+                if (!string.IsNullOrWhiteSpace(productVM.Product.ImageUrl))
+                {
+                    // delete the old image
+                    var resizeOldImageUrlPath = productVM.Product.ImageUrl.TrimStart('\\');
+                    var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
+
+                    if (System.IO.File.Exists(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+                }
+
                 string fileStreamPath = Path.Combine(productPath, fileName);
                 using (var fileStream = new FileStream(fileStreamPath, FileMode.Create))
                 {
@@ -88,11 +100,6 @@ public class ProductController : Controller
                 _unitOfWork.Product.Update(productVM.Product);
                 successMessage = "Product updated successfully!";
             }
-
-            //if (file != null && file.Length > 0)
-            //{
-
-            //}
             
             await _unitOfWork.Save();
             TempData["success"] = successMessage;
