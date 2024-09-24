@@ -19,7 +19,7 @@ public class ProductController : Controller
 
     public IActionResult Index(int page = 1, int pageSize = 10)
     {
-        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize).ToList();
+        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
         
         return View(objProductList);
     }
