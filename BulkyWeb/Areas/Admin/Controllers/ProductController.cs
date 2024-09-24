@@ -126,6 +126,7 @@ public class ProductController : Controller
         return Json(new { data = objProductList });
     }
 
+    [HttpDelete]
     public async Task<IActionResult> Delete(int? id)
     {
         var productToBeDeleted = await _unitOfWork.Product.Get(u => u.Id == id);
