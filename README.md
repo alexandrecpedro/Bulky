@@ -52,6 +52,7 @@ The following tools were used in building the project:<br><br>
 | Low-level binary code executed in web (Frontend) |        WEB ASSEMBLY       |     https://webassembly.org/      |
 |       JavaScript table library (Frontend)        |         DATATABLES        |     https://datatables.net/      |
 |            Rich Text Editor (Frontend)           |          TINYMCE          |     https://www.tiny.cloud/      |
+|             Custom Alerts (Frontend)             |        SWEETALERT 2       |  https://sweetalert2.github.io/      |
 |          Programming Language (Backend)          |          DOTNET           |  https://dotnet.microsoft.com/en-us/                  |
 |          Financial Infrastructure (Backend)      |          STRIPE           |  https://stripe.com/                  |
 | Email API and Email Marketing Campaigns (Backend) |         SENDGRID         |  https://sendgrid.com/en-us                  |
