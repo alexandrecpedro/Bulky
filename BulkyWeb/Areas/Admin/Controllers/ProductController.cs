@@ -157,10 +157,6 @@ public class ProductController : Controller
         List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
 
         return Json(new { data = objProductList });
-
-        //$('#myTable').DataTable( {
-        //    ajax: '/api/myData'
-        //} );
     }
 
     #endregion
