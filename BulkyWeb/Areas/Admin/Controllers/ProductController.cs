@@ -3,7 +3,6 @@ using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Drawing.Printing;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -117,38 +116,6 @@ public class ProductController : Controller
         return View(productVM);
     }
 
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null || id == 0)
-        {
-            return NotFound();
-        }
-        Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
-        //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
-        //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
-
-        if (productFromDb == null)
-        {
-            return NotFound();
-        }
-        return View(productFromDb);
-    }
-
-    [HttpPost, ActionName("Delete")]
-    public async Task<IActionResult> DeletePOST(int? id)
-    {
-        Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
-        if (productFromDb == null)
-        {
-            return NotFound();
-        }
-
-        _unitOfWork.Product.Remove(productFromDb);
-        await _unitOfWork.Save();
-        TempData["success"] = "Product deleted successfully!";
-        return RedirectToAction("Index");
-    }
-
     #region API CALLS
 
     [HttpGet]
@@ -157,6 +124,31 @@ public class ProductController : Controller
         List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
 
         return Json(new { data = objProductList });
+    }
+
+    public async Task<IActionResult> Delete(int? id)
+    {
+        var productToBeDeleted = await _unitOfWork.Product.Get(u => u.Id == id);
+
+        if (productToBeDeleted == null)
+        {
+            return Json(new { success = false, message = "Error while deleting" });
+        }
+
+        // remove old image
+        string wwwRootPath = _webHostEnvironment.WebRootPath;
+        var resizeOldImageUrlPath = productToBeDeleted.ImageUrl.TrimStart('\\');
+        var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
+
+        if (System.IO.File.Exists(oldImagePath))
+        {
+            System.IO.File.Delete(oldImagePath);
+        }
+
+        _unitOfWork.Product.Remove(productToBeDeleted);
+        await _unitOfWork.Save();
+
+        return Json(new { success = true, message = "Deleted successfully!" });
     }
 
     #endregion

@@ -54,7 +54,7 @@ The following tools were used in building the project:<br><br>
 |            Rich Text Editor (Frontend)           |          TINYMCE          |     https://www.tiny.cloud/      |
 |          Programming Language (Backend)          |          DOTNET           |  https://dotnet.microsoft.com/en-us/                  |
 |          Financial Infrastructure (Backend)      |          STRIPE           |  https://stripe.com/                  |
-| Email API and Email Marketing Campaigns (Backend) |         SENDGRID         |  https://stripe.com/                  |
+| Email API and Email Marketing Campaigns (Backend) |         SENDGRID         |  https://sendgrid.com/en-us                  |
 |                Database (Backend)                |        MSSQL SERVER       | https://www.microsoft.com/en-us/sql-server/sql-server-2022            |
 |          DotNET ORM (Backend, Database)          |     ENTITY FRAMEWORK      |     https://learn.microsoft.com/en-us/ef/      |
 |    API Documentation & Design Tools (Backend)    |          SWAGGER          |        https://swagger.io/                  |
