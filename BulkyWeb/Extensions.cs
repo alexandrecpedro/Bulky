@@ -1,5 +1,7 @@
 ﻿using Bulky.DataAccess;
 using Bulky.DataAccess.Data;
+using BulkyWeb.Areas.Admin.Controllers;
+using BulkyWeb.Areas.Customer.Controllers;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 
@@ -71,7 +73,7 @@ public static class Extensions
         });
     }
 
-    public static IServiceCollection AddRateLimiter(this IServiceCollection services)
+        public static IServiceCollection AddRateLimiter(this IServiceCollection services)
     {
         services.AddRateLimiter(rateLimiterOptions =>
         {

@@ -11,25 +11,32 @@ public class ProductController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IWebHostEnvironment _webHostEnvironment;
-    public ProductController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+    private readonly ILogger<ProductController> _logger;
+    public ProductController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<ProductController> logger)
     {
         _unitOfWork = unitOfWork;
         _webHostEnvironment = webHostEnvironment;
+        _logger = logger;
     }
 
-    public IActionResult Index(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
-        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
+        _logger.LogInformation("Starting product search all including category...");
+
+        IEnumerable<Product> objProductList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category");
         
         return View(objProductList);
     }
 
     public async Task<IActionResult> Upsert(int? id)
     {
+        _logger.LogInformation("Starting product upsert form...");
+
+        var categoryListAsync = await _unitOfWork.Category.GetAll();
+
         ProductVM productVM = new()
         {
-            CategoryList = _unitOfWork.Category
-                .GetAll().Select(u => new SelectListItem
+            CategoryList = categoryListAsync.Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
@@ -59,6 +66,8 @@ public class ProductController : Controller
     [HttpPost]
     public async Task<IActionResult> Upsert(ProductVM productVM, IFormFile? file)
     {
+        _logger.LogInformation("Starting product upsert...");
+
         if (ModelState.IsValid)
         {
             string wwwRootPath = _webHostEnvironment.WebRootPath;
@@ -106,8 +115,8 @@ public class ProductController : Controller
             return RedirectToAction("Index");
         }
 
-        productVM.CategoryList = _unitOfWork.Category
-                .GetAll().Select(u => new SelectListItem
+        var categoryListAsync = await _unitOfWork.Category.GetAll();
+        productVM.CategoryList = categoryListAsync.Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
@@ -119,9 +128,11 @@ public class ProductController : Controller
     #region API CALLS
 
     [HttpGet]
-    public IActionResult GetAll(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 10)
     {
-        List<Product> objProductList = _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category").ToList();
+        _logger.LogInformation("Starting product search all...");
+
+        IEnumerable<Product> objProductList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category");
 
         return Json(new { data = objProductList });
     }
@@ -129,6 +140,8 @@ public class ProductController : Controller
     [HttpDelete]
     public async Task<IActionResult> Delete(int? id)
     {
+        _logger.LogInformation("Starting product delete...");
+
         var productToBeDeleted = await _unitOfWork.Product.Get(u => u.Id == id);
 
         if (productToBeDeleted == null)

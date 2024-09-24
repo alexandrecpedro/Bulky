@@ -39,7 +39,7 @@ public class Repository<T> : IRepository<T> where T : class
         return await query.FirstOrDefaultAsync();
     }
 
-    public IEnumerable<T> GetAll(int page = 1, int pageSize = 10, string? includeProperties = null)
+    public async Task<IEnumerable<T>> GetAll(int page = 1, int pageSize = 10, string? includeProperties = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Max(pageSize, 10);
@@ -58,7 +58,7 @@ public class Repository<T> : IRepository<T> where T : class
         query = query
             .Skip((page - 1) * pageSize)
             .Take(pageSize);
-        return [.. query];
+        return await query.ToListAsync();
     }
 
     public void Remove(T entity)

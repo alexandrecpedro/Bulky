@@ -8,25 +8,33 @@ namespace BulkyWeb.Areas.Admin.Controllers;
 public class CategoryController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
-    public CategoryController(IUnitOfWork unitOfWork)
+    private readonly ILogger<CategoryController> _logger;
+    public CategoryController(IUnitOfWork unitOfWork, ILogger<CategoryController> logger)
     {
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
-    public IActionResult Index(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
-        List<Category> objCategoryList = _unitOfWork.Category.GetAll(page: page, pageSize: pageSize).ToList();
+        _logger.LogInformation("Starting category search all...");
+
+        IEnumerable<Category> objCategoryList = await _unitOfWork.Category.GetAll(page: page, pageSize: pageSize);
 
         return View(objCategoryList);
     }
 
     public IActionResult Create()
     {
+        _logger.LogInformation("Starting category creation form...");
+
         return View();
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
+        _logger.LogInformation("Starting category creation...");
+
         if (category.Name == category.DisplayOrder.ToString())
         {
             ModelState.AddModelError("name", "The DisplayOrder cannot exactly match the Name!");
@@ -48,6 +56,8 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Edit(int? id)
     {
+        _logger.LogInformation("Starting category edit form...");
+
         if (id == null || id == 0)
         {
             return NotFound();
@@ -66,6 +76,7 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(Category category)
     {
+        _logger.LogInformation("Starting category update...");
 
         if (category.Name == category.DisplayOrder.ToString())
         {
@@ -88,6 +99,8 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Delete(int? id)
     {
+        _logger.LogInformation("Starting category search by id to delete...");
+
         if (id == null || id == 0)
         {
             return NotFound();
@@ -106,6 +119,8 @@ public class CategoryController : Controller
     [HttpPost, ActionName("Delete")]
     public async Task<IActionResult> DeletePOST(int? id)
     {
+        _logger.LogInformation("Starting category delete...");
+
         Category? categoryFromDb = await _unitOfWork.Category.Get(u => u.Id == id);
         if (categoryFromDb == null)
         {
