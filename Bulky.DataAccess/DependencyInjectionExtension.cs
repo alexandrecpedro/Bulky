@@ -1,9 +1,9 @@
 ﻿using Bulky.DataAccess.Data;
-using Bulky.DataAccess.DbInitializer;
 using Bulky.DataAccess.Extensions;
 using Bulky.DataAccess.Repository;
 using Bulky.DataAccess.Repository.IRepository;
-using Microsoft.AspNetCore.Identity;
+using Bulky.Utility;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,11 +27,14 @@ public static class DependencyInjectionExtension
 
     private static void AddRepositories(IServiceCollection services)
     {
+        // Category
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+
         // DbInitializer
         //services.AddScoped<IDbInitializer, DbInitializer>();
 
-        // Category
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        // EmailSender
+        services.AddScoped<IEmailSender, EmailSender>();
 
         // Product
         services.AddScoped<IProductRepository, ProductRepository>();
