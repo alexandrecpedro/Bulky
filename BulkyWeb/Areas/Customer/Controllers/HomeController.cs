@@ -25,6 +25,20 @@ public class HomeController : Controller
         return View(productList);
     }
 
+    public async Task<IActionResult> Details(int productId)
+    {
+        _logger.LogInformation("Starting product details display...");
+
+        Product? product = await _unitOfWork.Product.Get(filter: u => u.Id == productId, includeProperties: "Category");
+
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        return View(product);
+    }
+
     public IActionResult Privacy()
     {
         _logger.LogInformation("Starting privacy search...");
