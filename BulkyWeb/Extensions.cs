@@ -1,7 +1,5 @@
 ﻿using Bulky.DataAccess;
 using Bulky.DataAccess.Data;
-using BulkyWeb.Areas.Admin.Controllers;
-using BulkyWeb.Areas.Customer.Controllers;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 
