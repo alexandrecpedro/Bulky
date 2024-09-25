@@ -1,6 +1,4 @@
 ﻿using Bulky.DataAccess;
-using Bulky.DataAccess.Data;
-using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 
 namespace BulkyWeb;
@@ -15,7 +13,6 @@ public static class Extensions
         services.AddInfrastructure(configuration: configuration);
         services.AddRazorPages();
         //services.ConfigureStripe(configuration: configuration);
-        services.ConfigureIdentity();
         //services.ConfigureAuthentication(configuration: configuration);
         services.ConfigureCookies();
         services.AddSessionConfiguration();
@@ -31,13 +28,6 @@ public static class Extensions
     //    services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
     //    StripeConfiguration.ApiKey = configuration.GetSection("Stripe:SecretKey").Get<string>();
     //}
-
-    public static void ConfigureIdentity(this IServiceCollection services)
-    {
-        services.AddIdentity<IdentityUser, IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddDefaultTokenProviders();
-    }
 
     //public static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
     //{

@@ -3,6 +3,7 @@ using Bulky.DataAccess.Extensions;
 using Bulky.DataAccess.Repository;
 using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Utility;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -16,7 +17,8 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        //ConfigureIdentity(services: services);
+        ConfigureIdentity(services: services);
+        //ConfigureEmailAddressOrigin(services: services, configuration: configuration);
         AddRepositories(services: services);
 
         if (!configuration.IsTestEnvironment())
@@ -24,6 +26,25 @@ public static class DependencyInjectionExtension
             AddDbContext(services: services, configuration: configuration);
         }
     }
+
+    private static void ConfigureIdentity(this IServiceCollection services)
+    {
+        services.AddIdentity<IdentityUser, IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+    }
+
+    // FLUENT EMAIL LIBRARY
+    //private static void ConfigureEmailAddressOrigin(this IServiceCollection services, IConfiguration configuration)
+    //{
+    //    var EMAIL_ADDRESS_ORIGIN = configuration.GetConnectionString("EmailAddress:Origin") ?? throw new InvalidOperationException("Connection string 'EmailAddress Origin' not found!");
+        
+    //    //FluentEmail Services
+    //    services
+    //        .AddFluentEmail(EMAIL_ADDRESS_ORIGIN)
+    //        .AddRazorRenderer()
+    //        .AddSmtpSender("localhost", 25);
+    //}
 
     private static void AddRepositories(IServiceCollection services)
     {
@@ -45,7 +66,7 @@ public static class DependencyInjectionExtension
 
     private static void AddDbContext(IServiceCollection services, IConfiguration configuration)
     {
-        var DB_CONNECTION_STRING = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        var DB_CONNECTION_STRING = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found!");
 
         // POSTGRESQL
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -55,11 +76,4 @@ public static class DependencyInjectionExtension
         //services.AddDbContext<ApplicationDbContext>(options => 
         //    options.UseSqlServer(connectionString: DB_CONNECTION_STRING));
     }
-
-    //private static void ConfigureIdentity(this IServiceCollection services)
-    //{
-    //    services.AddIdentity<IdentityUser, IdentityRole>()
-    //        .AddEntityFrameworkStores<ApplicationDbContext>()
-    //        .AddDefaultTokenProviders();
-    //}
 }
