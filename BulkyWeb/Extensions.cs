@@ -44,6 +44,7 @@ public static class Extensions
 
     public static void ConfigureCookies(this IServiceCollection services)
     {
+        // Always after identity settings
         services.ConfigureApplicationCookie(options => {
             options.LoginPath = $"/Identity/Account/Login";
             options.LogoutPath = $"/Identity/Account/Logout";
