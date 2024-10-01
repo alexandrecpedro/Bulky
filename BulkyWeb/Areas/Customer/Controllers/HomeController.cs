@@ -27,7 +27,7 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Details(int productId)
     {
-        _logger.LogInformation("Starting product details display...");
+        _logger.LogInformation("Starting details display...");
 
         Product? product = await _unitOfWork.Product.Get(filter: u => u.Id == productId, includeProperties: "Category");
 
@@ -36,7 +36,14 @@ public class HomeController : Controller
             return NotFound();
         }
 
-        return View(product);
+        ShoppingCart cart = new()
+        {
+            Product = product,
+            Count = 1,
+            ProductId = productId
+        };
+
+        return View(cart);
     }
 
     public IActionResult Privacy()
