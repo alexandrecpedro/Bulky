@@ -17,7 +17,7 @@ public class ApplicationUser : IdentityUser
     public string? State { get; set; }
     public string? PostalCode { get; set; }
     public int? CompanyId { get; set; }
-    [ForeignKey("CategoryId")]
+    [ForeignKey("CompanyId")]
     [ValidateNever]
     public Company Company { get; set; }
 }

@@ -5,6 +5,7 @@
 using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Bulky.Utility;
+using Bulky.Utility.Enum;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -135,6 +136,8 @@ namespace BulkyWeb.Areas.Identity.Pages.Account
                 _roleManager.CreateAsync(new IdentityRole(SD.Role_Company)).GetAwaiter().GetResult();
             }
 
+            var companyList = await _unitOfWork.Company.GetAll();
+
             Input = new()
             {
                 RoleList = _roleManager.Roles.Select(x => x.Name).Select(i => new SelectListItem
@@ -142,7 +145,7 @@ namespace BulkyWeb.Areas.Identity.Pages.Account
                     Text = i,
                     Value = i
                 }),
-                CompanyList = (await _unitOfWork.Company.GetAll()).Select(i => new SelectListItem
+                CompanyList = companyList.Select(i => new SelectListItem
                 {
                     Text = i.Name,
                     Value = i.Id.ToString()
@@ -173,6 +176,11 @@ namespace BulkyWeb.Areas.Identity.Pages.Account
                 user.State = Input.State;
                 user.PostalCode = Input.PostalCode;
                 user.PhoneNumber = Input.PhoneNumber;
+
+                if (Input.Role == SD.Role_Company)
+                {
+                    user.CompanyId = Input.CompanyId;
+                }
 
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
