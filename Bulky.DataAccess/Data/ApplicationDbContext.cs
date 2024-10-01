@@ -10,7 +10,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<ApplicationUser> ApplicationUsers { get; set; }
     public DbSet<Category> Categories { get; set; }
+    public DbSet<Company> Companies { get; set; }
     public DbSet<Product> Products { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         SetDecimalConvention(modelBuilder: modelBuilder);
 
         modelBuilder.ApplyConfiguration(configuration: new CategoriesSeeder());
+        modelBuilder.ApplyConfiguration(configuration: new CompaniesSeeder());
         modelBuilder.ApplyConfiguration(configuration: new ProductsSeeder());
     }
 
