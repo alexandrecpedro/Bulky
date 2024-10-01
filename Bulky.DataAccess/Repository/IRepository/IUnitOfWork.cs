@@ -8,5 +8,7 @@ public interface IUnitOfWork
 
     IProductRepository Product { get; }
 
+    IShoppingCartRepository ShoppingCart { get; }
+
     Task Save();
 }
