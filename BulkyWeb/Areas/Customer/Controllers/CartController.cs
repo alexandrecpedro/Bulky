@@ -51,6 +51,11 @@ public class CartController : Controller
         return View(ShoppingCartVM);
     }
 
+    public async Task<IActionResult> Summary()
+    {
+        return View();
+    }
+
     public async Task<IActionResult> Plus(int cartId)
     {
         _logger.LogInformation("Starting add product quantity to shopping cart...");
