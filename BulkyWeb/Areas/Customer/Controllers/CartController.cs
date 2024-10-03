@@ -51,6 +51,73 @@ public class CartController : Controller
         return View(ShoppingCartVM);
     }
 
+    public async Task<IActionResult> Plus(int cartId)
+    {
+        _logger.LogInformation("Starting add product quantity to shopping cart...");
+        var cartFromDb = await _unitOfWork.ShoppingCart.Get(filter: u => u.Id == cartId);
+
+        if (cartFromDb is null)
+        {
+            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            return NotFound();
+        }
+
+        cartFromDb.Count += 1;
+        _unitOfWork.ShoppingCart.Update(cartFromDb);
+        
+        TempData["success"] = "Cart updated successfully!";
+        
+        await _unitOfWork.Save();
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public async Task<IActionResult> Minus(int cartId)
+    {
+        _logger.LogInformation("Starting reducing product quantity from shopping cart...");
+        var cartFromDb = await _unitOfWork.ShoppingCart.Get(filter: u => u.Id == cartId);
+
+        if (cartFromDb is null)
+        {
+            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            return NotFound();
+        }
+
+        if (cartFromDb.Count <= 1)
+        {
+            return await Remove(cartId: cartId);
+        }
+
+        cartFromDb.Count -= 1;
+        _unitOfWork.ShoppingCart.Update(cartFromDb);
+
+        TempData["success"] = "Cart updated successfully!";
+
+        await _unitOfWork.Save();
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public async Task<IActionResult> Remove(int cartId)
+    {
+        _logger.LogInformation($"Starting removing product from shopping cart...");
+
+        var cartFromDb = await _unitOfWork.ShoppingCart.Get(filter: u => u.Id == cartId);
+
+        if (cartFromDb is null)
+        {
+            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            return NotFound();
+        }
+
+        _unitOfWork.ShoppingCart.Remove(cartFromDb);
+
+        TempData["success"] = "Cart removed successfully!";
+
+        await _unitOfWork.Save();
+        return RedirectToAction(nameof(Index));
+    }
+
     private double GetPriceBasedOnQuantity(ShoppingCart shoppingCart)
     {
         _logger.LogInformation("Starting find product price based on quantity...");
