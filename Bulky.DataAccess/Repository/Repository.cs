@@ -46,13 +46,18 @@ public class Repository<T> : IRepository<T> where T : class
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<T>> GetAll(int page = 1, int pageSize = 10, string? includeProperties = null)
+    public async Task<IEnumerable<T>> GetAll(Expression<Func<T, bool>>? filter, int page = 1, int pageSize = 10, string? includeProperties = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Max(pageSize, 10);
 
         string primaryKeyName = typeof(T).GetPrimaryKeyName();
         IQueryable<T> query = dbSet;
+
+        if (filter is not null)
+        {
+            query = query.Where(filter);
+        }
 
         query = GetFullEntity(query: query, includeProperties: includeProperties);
 
