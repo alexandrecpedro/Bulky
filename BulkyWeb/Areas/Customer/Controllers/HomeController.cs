@@ -60,7 +60,7 @@ public class HomeController : Controller
 
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("User ID not found.");
+            _logger.LogWarning("User ID not found!");
             return Unauthorized();
         }
 
@@ -70,14 +70,14 @@ public class HomeController : Controller
 
         if (product == null)
         {
-            _logger.LogWarning($"Product with ID {shoppingCart.ProductId} not found.");
+            _logger.LogWarning($"Product with ID {shoppingCart.ProductId} not found!");
             return NotFound();
         }
 
         Category? category = await _unitOfWork.Category.Get(filter: u => u.Id == product.CategoryId);
         if (category == null)
         {
-            _logger.LogWarning($"Category with ID {product.CategoryId} not found.");
+            _logger.LogWarning($"Category with ID {product.CategoryId} not found!");
             return NotFound();
         }
 
@@ -86,15 +86,17 @@ public class HomeController : Controller
         if (cartFromDb != null)
         {
             //shoppingCart cart exists
-            _logger.LogInformation($"Updating existing shopping cart for user {userId} with Product ID {shoppingCart.ProductId}.");
+            _logger.LogInformation($"Updating existing shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
             cartFromDb.Count += shoppingCart.Count;
             _unitOfWork.ShoppingCart.Update(cartFromDb);
         }
         else
         {
-            _logger.LogInformation($"Adding new shopping cart for user {userId} with Product ID {shoppingCart.ProductId}.");
+            _logger.LogInformation($"Adding new shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
             await _unitOfWork.ShoppingCart.Add(shoppingCart);
         }
+
+        TempData["success"] = "Cart updated successfully!";
 
         await _unitOfWork.Save();
 

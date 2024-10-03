@@ -32,10 +32,14 @@ public class Repository<T> : IRepository<T> where T : class
         await dbSet.AddAsync(entity);
     }
 
-    public async Task<T?> Get(Expression<Func<T, bool>> filter, string? includeProperties = null)
+    public async Task<T?> Get(Expression<Func<T, bool>> filter, string? includeProperties = null, bool tracked = false)
     {
         IQueryable<T> query = dbSet;
-        query = query.AsNoTracking().Where(filter);
+        if (tracked)
+        {
+            query = query.AsNoTracking();
+        }
+        query = query.Where(filter);
 
         query = Repository<T>.GetFullEntity(query: query, includeProperties: includeProperties);
         
