@@ -25,6 +25,91 @@ public class CartController : Controller
     {
         _logger.LogInformation($"Starting shopping cart display content...");
 
+        var userId = GetLoggedUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
+            filter: u => u.ApplicationUserId == userId, 
+            page: page, 
+            pageSize: pageSize, 
+            includeProperties: "Product");
+
+        ShoppingCartVM = new()
+        {
+            ShoppingCartList = shoppingCartList,
+            OrderHeader = new()
+        };
+
+        foreach(var cart in ShoppingCartVM.ShoppingCartList)
+        {
+            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
+            ShoppingCartVM.OrderHeader.OrderTotal += (cart.Price * cart.Count);
+        }
+
+        return View(ShoppingCartVM);
+    }
+
+    public async Task<IActionResult> Summary(int page = 1, int pageSize = 10)
+    {
+        _logger.LogInformation("Starting shopping cart summarizing...");
+
+        var userId = GetLoggedUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == userId);
+        if (user is null)
+        {
+            _logger.LogWarning("User not found!");
+            return Unauthorized();
+        }
+
+        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
+            filter: u => u.ApplicationUserId == userId, 
+            page: page, 
+            pageSize: pageSize, 
+            includeProperties: "Product");
+
+        if (shoppingCartList is null || !shoppingCartList.Any())
+        {
+            _logger.LogError($"Shopping cart not found!");
+            return NotFound();
+        }
+
+        double orderTotal = shoppingCartList.Aggregate(0d, (total, cart) =>
+        {
+            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
+            return total + (cart.Price * cart.Count);
+        });
+
+        OrderHeader orderHeader = new()
+        {
+            ApplicationUser = user,
+            Name = user.Name,
+            PhoneNumber = user.PhoneNumber ?? string.Empty,
+            StreetAddress = user.StreetAddress ?? string.Empty,
+            City = user.City ?? string.Empty,
+            State = user.State ?? string.Empty,
+            PostalCode = user.PostalCode ?? string.Empty,
+            OrderTotal = orderTotal
+        };
+
+        ShoppingCartVM = new()
+        {
+            ShoppingCartList = shoppingCartList,
+            OrderHeader = orderHeader,
+        };
+
+        return View(ShoppingCartVM);
+    }
+
+    private string? GetLoggedUserId()
+    {
         // Get logged user
         var claimsIdentity = (ClaimsIdentity)User.Identity;
         var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -32,28 +117,10 @@ public class CartController : Controller
         if (string.IsNullOrEmpty(userId))
         {
             _logger.LogWarning("User ID not found!");
-            return Unauthorized();
+            return null;
         }
 
-        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(filter: u => u.ApplicationUserId == userId, page: page, pageSize: pageSize, includeProperties: "Product");
-
-        ShoppingCartVM = new()
-        {
-            ShoppingCartList = shoppingCartList
-        };
-
-        foreach(var cart in ShoppingCartVM.ShoppingCartList)
-        {
-            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
-            ShoppingCartVM.OrderTotal += (cart.Price * cart.Count);
-        }
-
-        return View(ShoppingCartVM);
-    }
-
-    public async Task<IActionResult> Summary()
-    {
-        return View();
+        return userId;
     }
 
     public async Task<IActionResult> Plus(int cartId)

@@ -1,5 +1,10 @@
 ﻿@model ShoppingCartVM
 
+@{
+    var userCulture = CultureInfo.CurrentCulture;
+    RegionInfo regionInfo = new RegionInfo(userCulture.Name);
+    string currencySymbol = regionInfo.ISOCurrencySymbol;
+}
 
 <form method="post">
     <br />
@@ -68,8 +73,8 @@
                     <div class="col-md-4 offset-md-4">
                         <ul class="list-group mb-4">
                             <li class="d-flex justify-content-between align-items-center">
-                                <h5 class="text-dark fw-semibold text-uppercase"> Total (USD)</h5>
-                                <h4 class="text-dark fw-bolder">@Model.OrderTotal.ToString("c")</h4>
+                                <h5 class="text-dark fw-semibold text-uppercase"> Total (@currencySymbol)</h5>
+                                <h4 class="text-dark fw-bolder">@Model.OrderHeader.OrderTotal.ToString("c")</h4>
                             </li>
                         </ul>
                     </div>
