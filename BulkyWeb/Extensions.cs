@@ -1,4 +1,6 @@
 ﻿using Bulky.DataAccess;
+using Bulky.Utility;
+using Stripe;
 using System.Threading.RateLimiting;
 
 namespace BulkyWeb;
@@ -12,7 +14,7 @@ public static class Extensions
     {
         services.AddInfrastructure(configuration: configuration);
         services.AddRazorPages();
-        //services.ConfigureStripe(configuration: configuration);
+        services.ConfigureStripe(configuration: configuration);
         //services.ConfigureAuthentication(configuration: configuration);
         services.ConfigureCookies();
         services.AddSessionConfiguration();
@@ -23,11 +25,11 @@ public static class Extensions
     public static bool IsTestEnvironment(this IConfiguration configuration)
         => configuration.GetValue<bool>("InMemoryTest");
 
-    //public static void ConfigureStripe(this IServiceCollection services, IConfiguration configuration)
-    //{
-    //    services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
-    //    StripeConfiguration.ApiKey = configuration.GetSection("Stripe:SecretKey").Get<string>();
-    //}
+    public static void ConfigureStripe(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
+        StripeConfiguration.ApiKey = configuration.GetSection("Stripe:SecretKey").Get<string>();
+    }
 
     //public static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
     //{
