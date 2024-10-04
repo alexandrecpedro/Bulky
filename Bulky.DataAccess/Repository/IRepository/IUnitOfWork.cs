@@ -8,6 +8,10 @@ public interface IUnitOfWork
 
     ICompanyRepository Company { get; }
 
+    IOrderDetailRepository OrderDetail { get; }
+
+    IOrderHeaderRepository OrderHeader { get; }
+
     IProductRepository Product { get; }
 
     IShoppingCartRepository ShoppingCart { get; }

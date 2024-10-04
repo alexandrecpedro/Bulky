@@ -48,8 +48,14 @@ public static class DependencyInjectionExtension
 
     private static void AddRepositories(IServiceCollection services)
     {
+        // ApplicationUser
+        services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
+
         // Category
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+
+        // Company
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
 
         // DbInitializer
         //services.AddScoped<IDbInitializer, DbInitializer>();
@@ -57,8 +63,17 @@ public static class DependencyInjectionExtension
         // EmailSender
         services.AddScoped<IEmailSender, EmailSender>();
 
+        // OrderDetail
+        services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
+
+        // OrderHeader
+        services.AddScoped<IOrderHeaderRepository, OrderHeaderRepository>();
+
         // Product
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        // Shopping Cart
+        services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
