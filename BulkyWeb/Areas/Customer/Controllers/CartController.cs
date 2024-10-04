@@ -1,6 +1,7 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Bulky.Models.ViewModels;
+using Bulky.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -13,6 +14,7 @@ public class CartController : Controller
 {
     private readonly ILogger<CartController> _logger;
     private readonly IUnitOfWork _unitOfWork;
+    [BindProperty]
     public ShoppingCartVM ShoppingCartVM { get; set; }
 
     public CartController(ILogger<CartController> logger, IUnitOfWork unitOfWork)
@@ -108,6 +110,83 @@ public class CartController : Controller
         return View(ShoppingCartVM);
     }
 
+    [HttpPost]
+    [ActionName("Summary")]
+    public async Task<IActionResult> SummaryPOST(int? page, int? pageSize)
+    {
+        _logger.LogInformation("Starting placing an order...");
+
+        var userId = GetLoggedUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == userId);
+        if (user is null)
+        {
+            _logger.LogWarning("User not found!");
+            return Unauthorized();
+        }
+
+        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
+            filter: u => u.ApplicationUserId == userId,
+            page: page ?? 1,
+            pageSize: pageSize ?? 10,
+            includeProperties: "Product");
+
+        if (shoppingCartList is null || !shoppingCartList.Any())
+        {
+            _logger.LogError($"Shopping cart not found!");
+            return NotFound();
+        }
+
+        ShoppingCartVM.ShoppingCartList = shoppingCartList;
+        ShoppingCartVM.OrderHeader.OrderDate = DateTime.UtcNow;
+        ShoppingCartVM.OrderHeader.ApplicationUserId = userId;
+
+        ShoppingCartVM.OrderHeader.OrderTotal = shoppingCartList.Aggregate(0d, (total, cart) =>
+        {
+            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
+            return total + (cart.Price * cart.Count);
+        });
+
+        var statusMapping = new Dictionary<bool, (string PaymentStatus, string OrderStatus)>
+        {
+            // regular customer account - capture payment
+            [false] = (SD.PaymentStatusPending, SD.StatusPending),
+
+            // company user
+            [true] = (SD.PaymentStatusDelayedPayment, SD.StatusApproved)
+        };
+
+        bool isCompanyUser = user.CompanyId.HasValue && user.CompanyId.Value > 0;
+        (ShoppingCartVM.OrderHeader.PaymentStatus, ShoppingCartVM.OrderHeader.OrderStatus) = statusMapping[isCompanyUser];
+
+        await _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
+        await _unitOfWork.Save();
+
+        var orderDetails = ShoppingCartVM.ShoppingCartList
+            .Select(cart => new OrderDetail
+            {
+                ProductId = cart.ProductId,
+                OrderHeaderId = ShoppingCartVM.OrderHeader.Id,
+                Price = cart.Price,
+                Count = cart.Count,
+            })
+            .ToList();
+
+        await Task.WhenAll(orderDetails.Select(orderDetail => _unitOfWork.OrderDetail.Add(orderDetail)));
+        await _unitOfWork.Save();
+
+        if (!isCompanyUser)
+        {
+            // stripe logic
+        }
+
+        return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
+    }
+
     private string? GetLoggedUserId()
     {
         // Get logged user
@@ -121,6 +200,11 @@ public class CartController : Controller
         }
 
         return userId;
+    }
+
+    public IActionResult OrderConfirmation(int id)
+    {
+        return View(id);
     }
 
     public async Task<IActionResult> Plus(int cartId)
