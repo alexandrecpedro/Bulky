@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe.Checkout;
 using System.Globalization;
+using System.Net;
 using System.Security.Claims;
 
 namespace BulkyWeb.Areas.Customer.Controllers;
@@ -37,9 +38,9 @@ public class CartController : Controller
         }
 
         var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == userId, 
-            page: page, 
-            pageSize: pageSize, 
+            filter: u => u.ApplicationUserId == userId,
+            page: page,
+            pageSize: pageSize,
             includeProperties: "Product");
 
         ShoppingCartVM = new()
@@ -48,7 +49,7 @@ public class CartController : Controller
             OrderHeader = new()
         };
 
-        foreach(var cart in ShoppingCartVM.ShoppingCartList)
+        foreach (var cart in ShoppingCartVM.ShoppingCartList)
         {
             cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
             ShoppingCartVM.OrderHeader.OrderTotal += (cart.Price * cart.Count);
@@ -75,9 +76,9 @@ public class CartController : Controller
         }
 
         var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == userId, 
-            page: page, 
-            pageSize: pageSize, 
+            filter: u => u.ApplicationUserId == userId,
+            page: page,
+            pageSize: pageSize,
             includeProperties: "Product");
 
         if (shoppingCartList is null || !shoppingCartList.Any())
@@ -244,7 +245,7 @@ public class CartController : Controller
         await _unitOfWork.Save();
         Response.Headers.Append("Location", session.Url);
 
-        return new StatusCodeResult(303);
+        return new StatusCodeResult(statusCode: (int)HttpStatusCode.RedirectMethod);
     }
 
     private static string GetLocalCurrency()
@@ -254,16 +255,62 @@ public class CartController : Controller
         return regionInfo.ISOCurrencySymbol.ToLower();
     }
 
-    public async Task<IActionResult> OrderConfirmation(int id)
+    public async Task<IActionResult> OrderConfirmation(int id, int page = 1, int pageSize = 10)
     {
+        _logger.LogInformation($"Starting confirm order ID {id}");
+
         OrderHeader? orderHeader = await _unitOfWork.OrderHeader.Get(filter: u => u.Id == id, includeProperties: "ApplicationUser");
 
         if (orderHeader is null)
         {
+            _logger.LogWarning("Order not found!");
             return NotFound();
         }
 
-        //if (orderHeader.PaymentStatus)
+        if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
+        {
+            // order by customer
+            var service = new SessionService();
+            Session session = service.Get(id: orderHeader.SessionId);
+
+            Dictionary<string, (string OrderStatus, string PaymentStatus)> paymentStatusUpdates = new()
+            {
+                { "paid", (SD.StatusApproved, SD.PaymentStatusApproved) },
+                { "unpaid", (SD.StatusApproved, SD.PaymentStatusPending) },
+                { "failed", (SD.StatusCancelled, SD.PaymentStatusRejected) }
+            };
+
+            string sessionPaymentStatus = session.PaymentStatus?.Trim() ?? string.Empty;
+
+            if (paymentStatusUpdates.TryGetValue(sessionPaymentStatus, out var updateStatuses))
+            {
+                if (string.Equals(sessionPaymentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+                {
+                    _unitOfWork.OrderHeader.UpdateStripePaymentID(
+                        id: id,
+                        sessionId: session.Id,
+                        paymentIntentId: session.PaymentIntentId
+                    );
+                }
+
+                _unitOfWork.OrderHeader.UpdateStatus(
+                    id: id,
+                    orderStatus: SD.StatusApproved,
+                    paymentStatus: SD.PaymentStatusApproved
+                );
+
+                await _unitOfWork.Save();
+            }
+        }
+
+        IEnumerable<ShoppingCart> shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(
+            filter: u => u.ApplicationUserId == orderHeader.ApplicationUserId,
+            page: page,
+            pageSize: pageSize
+        );
+
+        _unitOfWork.ShoppingCart.RemoveRange(entity: shoppingCarts);
+        await _unitOfWork.Save();
 
         return View(id);
     }
@@ -281,9 +328,9 @@ public class CartController : Controller
 
         cartFromDb.Count += 1;
         _unitOfWork.ShoppingCart.Update(cartFromDb);
-        
+
         TempData["success"] = "Cart updated successfully!";
-        
+
         await _unitOfWork.Save();
 
         return RedirectToAction(nameof(Index));
