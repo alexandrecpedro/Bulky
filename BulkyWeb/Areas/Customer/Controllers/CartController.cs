@@ -186,73 +186,10 @@ public class CartController : Controller
         if (!isCompanyUser)
         {
             // stripe logic
-            await CreatePaymentSession(shoppingCartVM: ShoppingCartVM);
+           return await CreatePaymentSession(shoppingCartVM: ShoppingCartVM);
         }
 
         return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
-    }
-
-    private string? GetLoggedUserId()
-    {
-        // Get logged user
-        var claimsIdentity = (ClaimsIdentity)User.Identity;
-        var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            _logger.LogWarning("User ID not found!");
-            return null;
-        }
-
-        return userId;
-    }
-
-    private async Task<StatusCodeResult> CreatePaymentSession(ShoppingCartVM shoppingCartVM)
-    {
-        var domain = "https://localhost:7014/";
-        string currency = GetLocalCurrency();
-
-        var lineItems = shoppingCartVM.ShoppingCartList.Select(item => new SessionLineItemOptions
-        {
-            PriceData = new SessionLineItemPriceDataOptions
-            {
-                UnitAmount = (long)(item.Price * 100), // $20.50 => 2050
-                Currency = currency,
-                ProductData = new SessionLineItemPriceDataProductDataOptions
-                {
-                    Name = item.Product.Title
-                }
-            },
-            Quantity = item.Count
-        }).ToList();
-
-        var options = new SessionCreateOptions
-        {
-            SuccessUrl = domain + $"customer/cart/OrderConfirmation?id={shoppingCartVM.OrderHeader.Id}",
-            CancelUrl = domain + $"customer/cart/index",
-            LineItems = lineItems,
-            Mode = "payment",
-        };
-
-        var service = new SessionService();
-        Session session = service.Create(options);
-
-        _unitOfWork.OrderHeader.UpdateStripePaymentID(
-            id: ShoppingCartVM.OrderHeader.Id,
-            sessionId: session.Id,
-            paymentIntentId: session.PaymentIntentId);
-
-        await _unitOfWork.Save();
-        Response.Headers.Append("Location", session.Url);
-
-        return new StatusCodeResult(statusCode: (int)HttpStatusCode.RedirectMethod);
-    }
-
-    private static string GetLocalCurrency()
-    {
-        var cultureInfo = CultureInfo.CurrentCulture;
-        var regionInfo = new RegionInfo(cultureInfo.Name);
-        return regionInfo.ISOCurrencySymbol.ToLower();
     }
 
     public async Task<IActionResult> OrderConfirmation(int id, int page = 1, int pageSize = 10)
@@ -382,6 +319,71 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    #region Private Methods
+    private string? GetLoggedUserId()
+    {
+        // Get logged user
+        var claimsIdentity = (ClaimsIdentity)User.Identity;
+        var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("User ID not found!");
+            return null;
+        }
+
+        return userId;
+    }
+
+    private async Task<StatusCodeResult> CreatePaymentSession(ShoppingCartVM shoppingCartVM)
+    {
+        //var domain = "https://localhost:7014/";
+        var domain = Request.Scheme + "://" + Request.Host.Value + "/";
+        string currency = GetLocalCurrency();
+
+        var lineItems = shoppingCartVM.ShoppingCartList.Select(item => new SessionLineItemOptions
+        {
+            PriceData = new SessionLineItemPriceDataOptions
+            {
+                UnitAmount = (long)(item.Price * 100), // $20.50 => 2050
+                Currency = currency,
+                ProductData = new SessionLineItemPriceDataProductDataOptions
+                {
+                    Name = item.Product.Title
+                }
+            },
+            Quantity = item.Count
+        }).ToList();
+
+        var options = new SessionCreateOptions
+        {
+            SuccessUrl = domain + $"customer/cart/OrderConfirmation?id={shoppingCartVM.OrderHeader.Id}",
+            CancelUrl = domain + $"customer/cart/index",
+            LineItems = lineItems,
+            Mode = "payment",
+        };
+
+        var service = new SessionService();
+        Session session = service.Create(options);
+
+        _unitOfWork.OrderHeader.UpdateStripePaymentID(
+            id: ShoppingCartVM.OrderHeader.Id,
+            sessionId: session.Id,
+            paymentIntentId: session.PaymentIntentId);
+
+        await _unitOfWork.Save();
+        Response.Headers.Append("Location", session.Url);
+
+        return new StatusCodeResult(statusCode: (int)HttpStatusCode.RedirectMethod);
+    }
+
+    private static string GetLocalCurrency()
+    {
+        var cultureInfo = CultureInfo.CurrentCulture;
+        var regionInfo = new RegionInfo(cultureInfo.Name);
+        return regionInfo.ISOCurrencySymbol.ToLower();
+    }
+
     private double GetPriceBasedOnQuantity(ShoppingCart shoppingCart)
     {
         _logger.LogInformation("Starting find product price based on quantity...");
@@ -393,4 +395,6 @@ public class CartController : Controller
             _ => shoppingCart.Product.Price100,
         };
     }
+
+    #endregion
 }
