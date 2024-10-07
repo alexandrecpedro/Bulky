@@ -1,9 +1,12 @@
-﻿using Bulky.DataAccess.Repository.IRepository;
+﻿using Bulky.DataAccess.Repository;
+using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Bulky.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe.Checkout;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace BulkyWeb.Areas.Customer.Controllers;
@@ -182,6 +185,7 @@ public class CartController : Controller
         if (!isCompanyUser)
         {
             // stripe logic
+            await CreatePaymentSession(shoppingCartVM: ShoppingCartVM);
         }
 
         return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
@@ -202,8 +206,65 @@ public class CartController : Controller
         return userId;
     }
 
-    public IActionResult OrderConfirmation(int id)
+    private async Task<StatusCodeResult> CreatePaymentSession(ShoppingCartVM shoppingCartVM)
     {
+        var domain = "https://localhost:7014/";
+        string currency = GetLocalCurrency();
+
+        var lineItems = shoppingCartVM.ShoppingCartList.Select(item => new SessionLineItemOptions
+        {
+            PriceData = new SessionLineItemPriceDataOptions
+            {
+                UnitAmount = (long)(item.Price * 100), // $20.50 => 2050
+                Currency = currency,
+                ProductData = new SessionLineItemPriceDataProductDataOptions
+                {
+                    Name = item.Product.Title
+                }
+            },
+            Quantity = item.Count
+        }).ToList();
+
+        var options = new SessionCreateOptions
+        {
+            SuccessUrl = domain + $"customer/cart/OrderConfirmation?id={shoppingCartVM.OrderHeader.Id}",
+            CancelUrl = domain + $"customer/cart/index",
+            LineItems = lineItems,
+            Mode = "payment",
+        };
+
+        var service = new SessionService();
+        Session session = service.Create(options);
+
+        _unitOfWork.OrderHeader.UpdateStripePaymentID(
+            id: ShoppingCartVM.OrderHeader.Id,
+            sessionId: session.Id,
+            paymentIntentId: session.PaymentIntentId);
+
+        await _unitOfWork.Save();
+        Response.Headers.Append("Location", session.Url);
+
+        return new StatusCodeResult(303);
+    }
+
+    private static string GetLocalCurrency()
+    {
+        var cultureInfo = CultureInfo.CurrentCulture;
+        var regionInfo = new RegionInfo(cultureInfo.Name);
+        return regionInfo.ISOCurrencySymbol.ToLower();
+    }
+
+    public async Task<IActionResult> OrderConfirmation(int id)
+    {
+        OrderHeader? orderHeader = await _unitOfWork.OrderHeader.Get(filter: u => u.Id == id, includeProperties: "ApplicationUser");
+
+        if (orderHeader is null)
+        {
+            return NotFound();
+        }
+
+        //if (orderHeader.PaymentStatus)
+
         return View(id);
     }
 
