@@ -1,6 +1,10 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Utility;
+using Bulky.Utility.Enum;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -27,11 +31,27 @@ public class OrderController : Controller
     #region API CALLS
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAll(string status, int page = 1, int pageSize = 10)
     {
         _logger.LogInformation("Starting order search all...");
 
+        var objOrderHeaderListFilter = new Dictionary<string, Expression<Func<OrderHeader, bool>>>
+        {
+            ["pending"] = u => u.PaymentStatus == SD.PaymentStatusDelayedPayment,
+            ["inprocess"] = u => u.OrderStatus == SD.StatusInProcess,
+            ["completed"] = u => u.OrderStatus == SD.StatusShipped,
+            ["approved"] = u => u.OrderStatus == SD.StatusApproved
+        };
+
+        Expression<Func<OrderHeader, bool>> filter = u => true;
+
+        if (objOrderHeaderListFilter.TryGetValue(status, out var filterExpression))
+        {
+            filter = filterExpression;
+        }
+
         IEnumerable<OrderHeader> objOrderHeaderList = await _unitOfWork.OrderHeader.GetAll(
+            filter: filter,
             page: page, 
             pageSize: pageSize, 
             includeProperties: "ApplicationUser"
