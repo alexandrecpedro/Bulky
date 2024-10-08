@@ -127,7 +127,7 @@ public class CartController : Controller
 
         if (orderHeader is null) return NotFound();
 
-        if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
+        if (!IsCompanyUser(applicationUser: orderHeader.ApplicationUser) && orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
             await HandlePaymentStatus(orderHeader: orderHeader);
 
         var userId = GetLoggedUserId();
