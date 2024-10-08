@@ -30,7 +30,7 @@ public class OrderController : Controller
         return View();
     }
 
-    public async Task<IActionResult> Details(int orderId, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Details(int orderId, int? page, int? pageSize)
     {
         _logger.LogInformation($"Starting showing order details...");
 
@@ -40,18 +40,15 @@ public class OrderController : Controller
             return BadRequest();
         }
 
-        var orderHeaderTask = GetOrderHeaderByOrderId(orderId: orderId);
-        var orderDetailListTask = GetOrderDetailListByOrderId(
+        var orderHeader = await GetOrderHeaderByOrderId(orderId: orderId);
+        if (orderHeader is null) return NotFound();
+
+        var orderDetailList = await GetOrderDetailListByOrderId(
                 orderId: orderId,
-                page: page,
-                pageSize: pageSize
+                page: page ?? 1,
+                pageSize: pageSize ?? 10
             );
-        await Task.WhenAll(orderHeaderTask, orderDetailListTask);
-
-        var orderHeader = await orderHeaderTask;
-        var orderDetailList = await orderDetailListTask;
-
-        if (orderHeader is null || orderDetailList is null) return NotFound();
+        if (orderDetailList is null) return NotFound();
 
         OrderVM orderVM = new()
         {
