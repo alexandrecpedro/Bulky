@@ -1,5 +1,4 @@
-﻿using Bulky.DataAccess.Repository;
-using Bulky.DataAccess.Repository.IRepository;
+﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Bulky.Utility;
@@ -31,29 +30,21 @@ public class CartController : Controller
     {
         _logger.LogInformation($"Starting shopping cart display content...");
 
-        var userId = GetLoggedUserId();
-        if (userId is null)
-        {
-            return Unauthorized();
-        }
+        string? userId = GetLoggedUserId();
+        if (userId is null) return Unauthorized();
 
-        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == userId,
+        var shoppingCartList = await GetShoppingCartList(
+            applicationUserId: userId,
             page: page,
-            pageSize: pageSize,
-            includeProperties: "Product");
+            pageSize: pageSize
+        );
 
+        var orderTotal = CalculateOrderTotal(shoppingCartList: shoppingCartList);
         ShoppingCartVM = new()
         {
             ShoppingCartList = shoppingCartList,
-            OrderHeader = new()
+            OrderHeader = new() { OrderTotal = orderTotal }
         };
-
-        foreach (var cart in ShoppingCartVM.ShoppingCartList)
-        {
-            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
-            ShoppingCartVM.OrderHeader.OrderTotal += (cart.Price * cart.Count);
-        }
 
         return View(ShoppingCartVM);
     }
@@ -62,48 +53,20 @@ public class CartController : Controller
     {
         _logger.LogInformation("Starting shopping cart summarizing...");
 
-        var userId = GetLoggedUserId();
-        if (userId is null)
-        {
-            return Unauthorized();
-        }
+        string? userId = GetLoggedUserId();
+        if (userId is null) return Unauthorized();
 
-        var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == userId);
-        if (user is null)
-        {
-            _logger.LogWarning("User not found!");
-            return Unauthorized();
-        }
+        ApplicationUser? user = await GetUserById(applicationUserId: userId);
+        if (user is null) return Unauthorized();
 
-        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == userId,
+        var shoppingCartList = await GetShoppingCartList(
+            applicationUserId: userId,
             page: page,
-            pageSize: pageSize,
-            includeProperties: "Product");
+            pageSize: pageSize
+        );
+        if (shoppingCartList is null) return NotFound();
 
-        if (shoppingCartList is null || !shoppingCartList.Any())
-        {
-            _logger.LogError($"Shopping cart not found!");
-            return NotFound();
-        }
-
-        double orderTotal = shoppingCartList.Aggregate(0d, (total, cart) =>
-        {
-            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
-            return total + (cart.Price * cart.Count);
-        });
-
-        OrderHeader orderHeader = new()
-        {
-            ApplicationUser = user,
-            Name = user.Name,
-            PhoneNumber = user.PhoneNumber ?? string.Empty,
-            StreetAddress = user.StreetAddress ?? string.Empty,
-            City = user.City ?? string.Empty,
-            State = user.State ?? string.Empty,
-            PostalCode = user.PostalCode ?? string.Empty,
-            OrderTotal = orderTotal
-        };
+        OrderHeader orderHeader = CreateOrderHeader(applicationUser: user, shoppingCartList: shoppingCartList);
 
         ShoppingCartVM = new()
         {
@@ -126,68 +89,32 @@ public class CartController : Controller
             return Unauthorized();
         }
 
-        var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == userId);
+        var user = await GetUserById(applicationUserId: userId);
         if (user is null)
         {
-            _logger.LogWarning("User not found!");
             return Unauthorized();
         }
 
-        var shoppingCartList = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == userId,
-            page: page ?? 1,
-            pageSize: pageSize ?? 10,
-            includeProperties: "Product");
+        var shoppingCartList = await GetShoppingCartList(
+            applicationUserId: userId, 
+            page: page, 
+            pageSize: pageSize
+        );
 
-        if (shoppingCartList is null || !shoppingCartList.Any())
-        {
-            _logger.LogError($"Shopping cart not found!");
-            return NotFound();
-        }
+        if (shoppingCartList is null) return NotFound();
 
-        ShoppingCartVM.ShoppingCartList = shoppingCartList;
-        ShoppingCartVM.OrderHeader.OrderDate = DateTime.UtcNow;
-        ShoppingCartVM.OrderHeader.ApplicationUserId = userId;
+        PrepareOrderHeader(applicationUserId: userId, shoppingCartList: shoppingCartList);
 
-        ShoppingCartVM.OrderHeader.OrderTotal = shoppingCartList.Aggregate(0d, (total, cart) =>
-        {
-            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
-            return total + (cart.Price * cart.Count);
-        });
-
-        var statusMapping = new Dictionary<bool, (string PaymentStatus, string OrderStatus)>
-        {
-            // regular customer account - capture payment
-            [false] = (SD.PaymentStatusPending, SD.StatusPending),
-
-            // company user
-            [true] = (SD.PaymentStatusDelayedPayment, SD.StatusApproved)
-        };
-
-        bool isCompanyUser = user.CompanyId.HasValue && user.CompanyId.Value > 0;
-        (ShoppingCartVM.OrderHeader.PaymentStatus, ShoppingCartVM.OrderHeader.OrderStatus) = statusMapping[isCompanyUser];
+        SetOrderStatus(applicationUser: user);
 
         await _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
         await _unitOfWork.Save();
 
-        var orderDetails = ShoppingCartVM.ShoppingCartList
-            .Select(cart => new OrderDetail
-            {
-                ProductId = cart.ProductId,
-                OrderHeaderId = ShoppingCartVM.OrderHeader.Id,
-                Price = cart.Price,
-                Count = cart.Count,
-            })
-            .ToList();
+        await AddOrderDetails(shoppingCartList: shoppingCartList);
 
-        await Task.WhenAll(orderDetails.Select(orderDetail => _unitOfWork.OrderDetail.Add(orderDetail)));
-        await _unitOfWork.Save();
-
-        if (!isCompanyUser)
-        {
+        if (!IsCompanyUser(applicationUser: user))
             // stripe logic
-           return await CreatePaymentSession(shoppingCartVM: ShoppingCartVM);
-        }
+            return await CreatePaymentSession(shoppingCartVM: ShoppingCartVM);
 
         return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
     }
@@ -196,57 +123,24 @@ public class CartController : Controller
     {
         _logger.LogInformation($"Starting confirm order ID {id}");
 
-        OrderHeader? orderHeader = await _unitOfWork.OrderHeader.Get(filter: u => u.Id == id, includeProperties: "ApplicationUser");
+        OrderHeader? orderHeader = await GetOrderHeader(orderId: id);
 
-        if (orderHeader is null)
-        {
-            _logger.LogWarning("Order not found!");
-            return NotFound();
-        }
+        if (orderHeader is null) return NotFound();
 
         if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
-        {
-            // order by customer
-            var service = new SessionService();
-            Session session = service.Get(id: orderHeader.SessionId);
+            await HandlePaymentStatus(orderHeader: orderHeader);
 
-            Dictionary<string, (string OrderStatus, string PaymentStatus)> paymentStatusUpdates = new()
-            {
-                { "paid", (SD.StatusApproved, SD.PaymentStatusApproved) },
-                { "unpaid", (SD.StatusApproved, SD.PaymentStatusPending) },
-                { "failed", (SD.StatusCancelled, SD.PaymentStatusRejected) }
-            };
+        var userId = GetLoggedUserId();
+        if (string.IsNullOrWhiteSpace(userId)) return NotFound();
 
-            string sessionPaymentStatus = session.PaymentStatus?.Trim() ?? string.Empty;
-
-            if (paymentStatusUpdates.TryGetValue(sessionPaymentStatus, out var updateStatuses))
-            {
-                if (string.Equals(sessionPaymentStatus, "paid", StringComparison.OrdinalIgnoreCase))
-                {
-                    _unitOfWork.OrderHeader.UpdateStripePaymentID(
-                        id: id,
-                        sessionId: session.Id,
-                        paymentIntentId: session.PaymentIntentId
-                    );
-                }
-
-                _unitOfWork.OrderHeader.UpdateStatus(
-                    id: id,
-                    orderStatus: SD.StatusApproved,
-                    paymentStatus: SD.PaymentStatusApproved
-                );
-
-                await _unitOfWork.Save();
-            }
-        }
-
-        IEnumerable<ShoppingCart> shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(
-            filter: u => u.ApplicationUserId == orderHeader.ApplicationUserId,
+        IEnumerable<ShoppingCart>? shoppingCartList = await GetShoppingCartList(
+            applicationUserId: userId,
             page: page,
             pageSize: pageSize
         );
+        if (shoppingCartList is null) return NotFound();
 
-        _unitOfWork.ShoppingCart.RemoveRange(entity: shoppingCarts);
+        _unitOfWork.ShoppingCart.RemoveRange(entity: shoppingCartList);
         await _unitOfWork.Save();
 
         return View(id);
@@ -328,11 +222,125 @@ public class CartController : Controller
 
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("User ID not found!");
+            _logger.LogError("User ID not found!");
             return null;
         }
 
         return userId;
+    }
+
+    private async Task<ApplicationUser?> GetUserById(string applicationUserId)
+    {
+        if (string.IsNullOrWhiteSpace(applicationUserId))
+        {
+            _logger.LogError($"Invalid user ID {applicationUserId}!");
+            return null;
+        }
+        
+        var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == applicationUserId);
+        if (user is null)
+        {
+            _logger.LogError("User not found!");
+            return null;
+        }
+
+        return user;
+    }
+
+    private async Task<IEnumerable<ShoppingCart>> GetShoppingCartList(string applicationUserId, int? page, int? pageSize)
+    {
+        var shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(
+            filter: u => u.ApplicationUserId == applicationUserId,
+            page: page ?? 1,
+            pageSize: pageSize ?? 10,
+            includeProperties: "Product");
+
+        if (shoppingCarts is null || !shoppingCarts.Any())
+        {
+            _logger.LogError($"Shopping cart not found!");
+            return [];
+        }
+
+        return shoppingCarts.Select(cart =>
+        {
+            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
+            return cart;
+        });
+    }
+
+    private double CalculateOrderTotal(IEnumerable<ShoppingCart>? shoppingCartList)
+    {
+        if (shoppingCartList is null || !shoppingCartList.Any())
+        {
+            return 0d;
+        }
+        return shoppingCartList.Sum(cart => GetPriceBasedOnQuantity(cart) * cart.Count);
+    }
+
+    private OrderHeader CreateOrderHeader(ApplicationUser applicationUser, IEnumerable<ShoppingCart> shoppingCartList)
+    {
+        var orderTotal = CalculateOrderTotal(shoppingCartList: shoppingCartList);
+
+        return new OrderHeader
+        {
+            ApplicationUser = applicationUser,
+            Name = applicationUser.Name,
+            PhoneNumber = applicationUser.PhoneNumber ?? string.Empty,
+            StreetAddress = applicationUser.StreetAddress ?? string.Empty,
+            City = applicationUser.City ?? string.Empty,
+            State = applicationUser.State ?? string.Empty,
+            PostalCode = applicationUser.PostalCode ?? string.Empty,
+            OrderTotal = orderTotal
+        };
+    }
+
+    private void PrepareOrderHeader(string applicationUserId, IEnumerable<ShoppingCart> shoppingCartList)
+    {
+        ShoppingCartVM.ShoppingCartList = shoppingCartList;
+        ShoppingCartVM.OrderHeader.OrderDate = DateTime.UtcNow;
+        ShoppingCartVM.OrderHeader.ApplicationUserId = applicationUserId;
+
+        ShoppingCartVM.OrderHeader.OrderTotal = shoppingCartList.Aggregate(0d, (total, cart) =>
+        {
+            cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
+            return total + (cart.Price * cart.Count);
+        });
+    }
+
+    private void SetOrderStatus(ApplicationUser applicationUser)
+    {
+        bool isCompanyUser = IsCompanyUser(applicationUser: applicationUser);
+        var statusMapping = new Dictionary<bool, (string PaymentStatus, string OrderStatus)>
+        {
+            // regular customer account - capture payment
+            [false] = OrderStatusManagement.orderStatusCustomer[OrderStatusManagement.Makes_Payment],
+
+            // company user
+            [true] = OrderStatusManagement.orderStatusCompany[OrderStatusManagement.Makes_Payment]
+        };
+
+        (ShoppingCartVM.OrderHeader.PaymentStatus, ShoppingCartVM.OrderHeader.OrderStatus) = statusMapping[isCompanyUser];
+    }
+
+    private bool IsCompanyUser(ApplicationUser applicationUser)
+    {
+        return applicationUser.CompanyId.HasValue && applicationUser.CompanyId.Value > 0;
+    }
+
+    private async Task AddOrderDetails(IEnumerable<ShoppingCart> shoppingCartList)
+    {
+        var orderDetails = ShoppingCartVM.ShoppingCartList
+            .Select(cart => new OrderDetail
+            {
+                ProductId = cart.ProductId,
+                OrderHeaderId = ShoppingCartVM.OrderHeader.Id,
+                Price = cart.Price,
+                Count = cart.Count,
+            })
+            .ToList();
+
+        await Task.WhenAll(orderDetails.Select(orderDetail => _unitOfWork.OrderDetail.Add(orderDetail)));
+        await _unitOfWork.Save();
     }
 
     private async Task<StatusCodeResult> CreatePaymentSession(ShoppingCartVM shoppingCartVM)
@@ -375,6 +383,61 @@ public class CartController : Controller
         Response.Headers.Append("Location", session.Url);
 
         return new StatusCodeResult(statusCode: (int)HttpStatusCode.RedirectMethod);
+    }
+
+    private async Task<OrderHeader?> GetOrderHeader(int orderId)
+    {
+        if (orderId == 0)
+        {
+            _logger.LogError($"Order ID {orderId} not found!");
+            return null;
+        }
+
+        OrderHeader? orderHeader = await _unitOfWork.OrderHeader.Get(filter: u => u.Id == orderId, includeProperties: "ApplicationUser");
+
+        if (orderHeader is null)
+        {
+            _logger.LogError($"Order not found!");
+            return null;
+        }
+
+        return orderHeader;
+    }
+
+    private async Task HandlePaymentStatus(OrderHeader orderHeader)
+    {
+        // order by customer
+        var service = new SessionService();
+        Session session = service.Get(id: orderHeader.SessionId);
+
+        Dictionary<string, (string OrderStatus, string PaymentStatus)> paymentStatusUpdates = new()
+            {
+                { "paid", (SD.StatusApproved, SD.PaymentStatusApproved) },
+                { "unpaid", (SD.StatusApproved, SD.PaymentStatusPending) },
+                { "failed", (SD.StatusCancelled, SD.PaymentStatusRejected) }
+            };
+
+        string sessionPaymentStatus = session.PaymentStatus?.Trim() ?? string.Empty;
+
+        if (paymentStatusUpdates.TryGetValue(sessionPaymentStatus, out var updateStatuses))
+        {
+            if (string.Equals(sessionPaymentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+            {
+                _unitOfWork.OrderHeader.UpdateStripePaymentID(
+                    id: orderHeader.Id,
+                    sessionId: session.Id,
+                    paymentIntentId: session.PaymentIntentId
+                );
+            }
+
+            _unitOfWork.OrderHeader.UpdateStatus(
+                id: orderHeader.Id,
+                orderStatus: SD.StatusApproved,
+                paymentStatus: SD.PaymentStatusApproved
+            );
+
+            await _unitOfWork.Save();
+        }
     }
 
     private static string GetLocalCurrency()
