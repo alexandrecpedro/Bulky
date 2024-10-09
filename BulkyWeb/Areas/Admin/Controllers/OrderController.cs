@@ -2,11 +2,11 @@
 using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Bulky.Utility;
-using Bulky.Utility.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
+using System.Security.Claims;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -91,27 +91,11 @@ public class OrderController : Controller
     {
         _logger.LogInformation("Starting order search all...");
 
-        var objOrderHeaderListFilter = new Dictionary<string, Expression<Func<OrderHeader, bool>>>
-        {
-            ["pending"] = u => u.PaymentStatus == SD.PaymentStatusDelayedPayment,
-            ["inprocess"] = u => u.OrderStatus == SD.StatusInProcess,
-            ["completed"] = u => u.OrderStatus == SD.StatusShipped,
-            ["approved"] = u => u.OrderStatus == SD.StatusApproved
-        };
-
-        Expression<Func<OrderHeader, bool>> filter = u => true;
-
-        if (objOrderHeaderListFilter.TryGetValue(status, out var filterExpression))
-        {
-            filter = filterExpression;
-        }
-
-        IEnumerable<OrderHeader> objOrderHeaderList = await _unitOfWork.OrderHeader.GetAll(
-            filter: filter,
-            page: page, 
-            pageSize: pageSize, 
-            includeProperties: "ApplicationUser"
-        );
+        IEnumerable<OrderHeader> objOrderHeaderList = await GetFilteredOrderHeaders(
+            status: status,
+            page: page,
+            pageSize: pageSize
+        ); 
 
         return Json(new { data = objOrderHeaderList });
     }
@@ -119,6 +103,22 @@ public class OrderController : Controller
     #endregion
 
     #region Private Methods
+
+    private string? GetLoggedUserId()
+    {
+        // Get logged user
+        var claimsIdentity = (ClaimsIdentity)User.Identity;
+        var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogError("User ID not found!");
+            return null;
+        }
+
+        return userId;
+    }
+
     private async Task<OrderHeader?> GetOrderHeaderByOrderId(int orderId)
     {
         var orderHeader = await _unitOfWork.OrderHeader.Get(
@@ -162,16 +162,92 @@ public class OrderController : Controller
         orderHeader.State = OrderVM.OrderHeader.State;
         orderHeader.PostalCode = OrderVM.OrderHeader.PostalCode;
 
-        if (!string.IsNullOrWhiteSpace(OrderVM.OrderHeader.Carrier))
-        {
-            orderHeader.Carrier = OrderVM.OrderHeader.Carrier;
-        }
-        if (!string.IsNullOrWhiteSpace(OrderVM.OrderHeader.TrackingNumber))
-        {
-            orderHeader.TrackingNumber = OrderVM.OrderHeader.TrackingNumber;
-        }
+        orderHeader.Carrier = !string.IsNullOrWhiteSpace(OrderVM.OrderHeader.Carrier)
+            ? OrderVM.OrderHeader.Carrier
+            : orderHeader.Carrier;
+
+        orderHeader.Carrier = !string.IsNullOrWhiteSpace(OrderVM.OrderHeader.TrackingNumber)
+            ? OrderVM.OrderHeader.TrackingNumber
+            : orderHeader.TrackingNumber;
 
         return orderHeader;
     }
+
+    private async Task<IEnumerable<OrderHeader>?> GetFilteredOrderHeaders(string status, int page, int pageSize)
+    {
+        Expression<Func<OrderHeader, bool>> orderFilter = GetOrderFilter(status: status);
+
+        Expression<Func<OrderHeader, bool>> statusFilter = GetStatusFilter(status: status);
+
+        Expression<Func<OrderHeader, bool>> combinedFilter = CombineFilters(orderFilter: orderFilter, statusFilter: statusFilter);
+
+        var orderHeaderList = await _unitOfWork.OrderHeader.GetAll(
+            filter: combinedFilter,
+            page: page,
+            pageSize: pageSize,
+            includeProperties: "ApplicationUser"
+        );
+
+        if (orderHeaderList is null)
+        {
+            _logger.LogError("Order header list not found!");
+            return null;
+        }
+
+        return orderHeaderList;
+    }
+
+    private Expression<Func<OrderHeader, bool>> GetOrderFilter(string status)
+    {
+        var isAdmin = User.IsInRole(SD.Role_Admin);
+        var isEmployee = User.IsInRole(SD.Role_Employee);
+
+        if (isAdmin || isEmployee)
+            return u => true;
+
+        var userId = GetLoggedUserId();
+        return CreateUserFilter(userId: userId);
+    }
+
+    private Expression<Func<OrderHeader, bool>> CreateUserFilter(string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            _logger.LogError("User ID not found!");
+            return u => false;
+        }
+        return u => u.ApplicationUserId == userId;
+    }
+
+    private Expression<Func<OrderHeader, bool>> GetStatusFilter(string status)
+    {
+        var objOrderHeaderListFilter = new Dictionary<string, Expression<Func<OrderHeader, bool>>>
+        {
+            ["pending"] = (u => u.PaymentStatus == SD.PaymentStatusDelayedPayment),
+            ["inprocess"] = (u => u.OrderStatus == SD.StatusInProcess),
+            ["completed"] = (u => u.OrderStatus == SD.StatusShipped),
+            ["approved"] = (u => u.OrderStatus == SD.StatusApproved)
+        };
+
+        return objOrderHeaderListFilter.TryGetValue(status, out var filterExpression)
+            ? filterExpression
+            : u => true;
+    }
+
+    private Expression<Func<OrderHeader, bool>> CombineFilters(
+        Expression<Func<OrderHeader, bool>> orderFilter,
+        Expression<Func<OrderHeader, bool>> statusFilter
+    )
+    {
+        var parameter = Expression.Parameter(typeof(OrderHeader), "u");
+
+        var combined = Expression.AndAlso(
+            Expression.Invoke(orderFilter, parameter),
+            Expression.Invoke(statusFilter, parameter)
+        );
+
+        return Expression.Lambda<Func<OrderHeader, bool>>(combined, parameter);
+    }
+
     #endregion
 }
