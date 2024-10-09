@@ -9,6 +9,8 @@ public static class SD
     public static readonly string Role_Customer = RoleEnum.Customer.ToString();
     public static readonly string Role_Employee = RoleEnum.Employee.ToString();
 
+    public const string Role_Admin_Employee = nameof(RoleEnum.Admin) + "," + nameof(RoleEnum.Employee);
+
     public static readonly string StatusApproved = StatusEnum.Approved.ToString();
     public static readonly string StatusCancelled = StatusEnum.Cancelled.ToString();
     public static readonly string StatusPending = StatusEnum.Pending.ToString();

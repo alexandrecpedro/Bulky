@@ -64,7 +64,7 @@ public static class Extensions
         });
     }
 
-        public static IServiceCollection AddRateLimiter(this IServiceCollection services)
+    public static IServiceCollection AddRateLimiter(this IServiceCollection services)
     {
         services.AddRateLimiter(rateLimiterOptions =>
         {

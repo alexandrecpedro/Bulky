@@ -3,10 +3,10 @@ using Bulky.Models;
 using Bulky.Models.ViewModels;
 using Bulky.Utility;
 using Bulky.Utility.Enum;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Stripe.Climate;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
@@ -16,6 +16,8 @@ public class OrderController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<OrderController> _logger;
+    [BindProperty]
+    public OrderVM OrderVM { get; set; }
 
     public OrderController(IUnitOfWork unitOfWork, ILogger<OrderController> logger)
     {
@@ -50,13 +52,36 @@ public class OrderController : Controller
             );
         if (orderDetailList is null) return NotFound();
 
-        OrderVM orderVM = new()
+        OrderVM = new()
         {
             OrderHeader = orderHeader,
             OrderDetailList = orderDetailList ?? []
         };
 
-        return View(orderVM);
+        return View(OrderVM);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = SD.Role_Admin_Employee)]
+    public async Task<IActionResult> UpdateOrderDetail()
+    {
+        _logger.LogInformation($"Starting update order details...");
+
+        var orderHeaderFromDb = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
+        if (orderHeaderFromDb is null)
+        {
+            _logger.LogError($"Order header not found!");
+            return BadRequest();
+        }
+
+        orderHeaderFromDb = MapProperties(orderHeader: orderHeaderFromDb);
+
+        _unitOfWork.OrderHeader.Update(orderHeaderFromDb);
+        await _unitOfWork.Save();
+
+        TempData["Success"] = "Order details updated successfully!";
+
+        return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
     }
 
     #region API CALLS
@@ -126,6 +151,27 @@ public class OrderController : Controller
         }
 
         return orderDetailList;
+    }
+
+    private OrderHeader MapProperties(OrderHeader orderHeader)
+    {
+        orderHeader.Name = OrderVM.OrderHeader.Name;
+        orderHeader.PhoneNumber = OrderVM.OrderHeader.PhoneNumber;
+        orderHeader.StreetAddress = OrderVM.OrderHeader.StreetAddress;
+        orderHeader.City = OrderVM.OrderHeader.City;
+        orderHeader.State = OrderVM.OrderHeader.State;
+        orderHeader.PostalCode = OrderVM.OrderHeader.PostalCode;
+
+        if (!string.IsNullOrWhiteSpace(OrderVM.OrderHeader.Carrier))
+        {
+            orderHeader.Carrier = OrderVM.OrderHeader.Carrier;
+        }
+        if (!string.IsNullOrWhiteSpace(OrderVM.OrderHeader.TrackingNumber))
+        {
+            orderHeader.TrackingNumber = OrderVM.OrderHeader.TrackingNumber;
+        }
+
+        return orderHeader;
     }
     #endregion
 }

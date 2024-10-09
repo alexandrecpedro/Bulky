@@ -103,12 +103,15 @@ namespace BulkyWeb.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
 
+#pragma warning disable CS8632
             public string? Role { get; set; }
+#pragma warning restore CS8632
             [ValidateNever]
             public IEnumerable<SelectListItem> RoleList { get; set; }
 
             [Required]
             public string Name { get; set; }
+#pragma warning disable CS8632
             public string? StreetAddress { get; set; }
             //public string? Number { get; set; }
             //public string? Complement { get; set; }
@@ -119,6 +122,7 @@ namespace BulkyWeb.Areas.Identity.Pages.Account
             public string? PhoneNumber { get; set; }
 
             public int? CompanyId { get; set; }
+#pragma warning restore CS8632
             [ValidateNever]
             public IEnumerable<SelectListItem> CompanyList { get; set; }
         }

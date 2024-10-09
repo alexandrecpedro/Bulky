@@ -7,6 +7,7 @@
 }
 
 <form method="post" style="min-height:100vh">
+    <input asp-for="OrderHeader.Id" hidden />
     <div class="container mb-2">
         <div class="card">
             <div class="card-header bg-dark text-light ml-0">
@@ -162,13 +163,13 @@
                                 <article class="row my-1">
                                     <div class="col-3">Session ID</div>
                                     <div class="col-9">
-                                        <input type="text" readonly class="form-control" />
+                                        <input asp-for="OrderHeader.SessionId" readonly type="text" class="form-control" />
                                     </div>
                                 </article>
                                 <article class="row my-1">
                                     <div class="col-3">Payment Intent ID</div>
                                     <div class="col-9">
-                                        <input type="text" readonly class="form-control" />
+                                        <input asp-for="OrderHeader.PaymentIntentId" readonly type="text" class="form-control" />
                                     </div>
                                 </article>
                             }
@@ -198,7 +199,7 @@
                             </article>
                             @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                             {
-                                <input type="submit" class="btn btn-warning form-control my-1" value="Update Order Details" />
+                                <button type="submit" asp-action="UpdateOrderDetail" class="btn btn-warning form-control my-1">Update Order Details</button>
                             }
 
                         </section>
