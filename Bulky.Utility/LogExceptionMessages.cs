@@ -18,7 +18,8 @@ public static class LogExceptionMessages
     public static readonly string OrderDetailListNotFoundException = "Order detail list not found!";
     
     // OrderHeader
-    public static readonly string OrderHeaderInvalidDataException = "Order header invalid!";
+    public static readonly string OrderHeaderIdInvalidDataException = "Invalid order header ID!";
+    public static readonly string OrderHeaderInvalidDataException = "Invalid order header!";
     public static readonly string OrderHeaderNotFoundException = "Order header not found!";
     
     // Product

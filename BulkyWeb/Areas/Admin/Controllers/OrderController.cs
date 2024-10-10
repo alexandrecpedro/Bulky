@@ -5,7 +5,10 @@ using Bulky.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+using Stripe.Checkout;
+using System.Globalization;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 
@@ -39,14 +42,14 @@ public class OrderController : Controller
 
         if (orderId == 0)
         {
-            _logger.LogError($"Invalid order ID {orderId}!");
+            _logger.LogError(message: LogExceptionMessages.OrderHeaderIdInvalidDataException);
             return BadRequest();
         }
 
-        var orderHeader = await GetOrderHeaderByOrderId(orderId: orderId);
+        var orderHeader = await GetOrderHeaderById(orderId: orderId);
         if (orderHeader is null) return NotFound();
 
-        var orderDetailList = await GetOrderDetailListByOrderId(
+        var orderDetailList = await GetOrderDetailListByOrderHeaderId(
                 orderId: orderId,
                 page: page ?? 1,
                 pageSize: pageSize ?? 10
@@ -68,12 +71,8 @@ public class OrderController : Controller
     {
         _logger.LogInformation($"Starting update order details...");
 
-        var orderHeaderFromDb = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
-        if (orderHeaderFromDb is null)
-        {
-            _logger.LogError(message: LogExceptionMessages.OrderHeaderNotFoundException);
-            return BadRequest();
-        }
+        var orderHeaderFromDb = await GetOrderHeaderById(orderId: OrderVM.OrderHeader.Id);
+        if (orderHeaderFromDb is null) return NotFound();
 
         orderHeaderFromDb = MapProperties(orderHeader: orderHeaderFromDb, orderStep: nameof(UpdateOrderDetail));
 
@@ -105,16 +104,10 @@ public class OrderController : Controller
     [Authorize(Roles = SD.Role_Admin_Employee)]
     public async Task<IActionResult> ShipOrder()
     {
-        OrderHeader? orderHeader = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
+        OrderHeader? orderHeader = await GetOrderHeaderById(orderId: OrderVM.OrderHeader.Id);
         if (orderHeader is null) return NotFound();
 
         orderHeader = MapProperties(orderHeader: orderHeader, orderStep: nameof(ShipOrder));
-
-        //if (string.IsNullOrWhiteSpace(orderHeader.Carrier) || string.IsNullOrWhiteSpace(orderHeader.TrackingNumber))
-        //{
-        //    _logger.LogWarning(message: LogExceptionMessages.OrderHeaderInvalidDataException);
-        //    return BadRequest();
-        //}
 
         _unitOfWork.OrderHeader.Update(orderHeader);
         await _unitOfWork.Save();
@@ -127,7 +120,7 @@ public class OrderController : Controller
     [Authorize(Roles = SD.Role_Admin_Employee)]
     public async Task<IActionResult> CancelOrder()
     {
-        OrderHeader? orderHeader = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
+        OrderHeader? orderHeader = await GetOrderHeaderById(orderId: OrderVM.OrderHeader.Id);
         if (orderHeader is null) return NotFound();
 
         var paymentStatus = (orderHeader.PaymentStatus != SD.PaymentStatusApproved) 
@@ -154,6 +147,58 @@ public class OrderController : Controller
         return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
     }
 
+    [HttpPost]
+    [ActionName("Details")]
+    public async Task<IActionResult> Details_PAY_NOW(int? page, int? pageSize)
+    {
+        var orderHeader = await GetOrderHeaderById(orderId: OrderVM.OrderHeader.Id);
+        if (orderHeader is null) return NotFound();
+        OrderVM.OrderHeader = orderHeader;
+
+        var orderDetailList = await GetOrderDetailListByOrderHeaderId(
+                orderId: OrderVM.OrderHeader.Id,
+                page: page ?? 1,
+                pageSize: pageSize ?? 10
+        );
+        if (orderDetailList is null) return NotFound();
+        OrderVM.OrderDetailList = orderDetailList;
+
+        //stripe logic
+        return await CreatePaymentSession();
+    }
+
+    public async Task<IActionResult> PaymentConfirmation(int orderHeaderId)
+    {
+        OrderHeader? orderHeader = await GetOrderHeaderById(orderId: orderHeaderId);
+        if (orderHeader is null) return NotFound();
+
+        if (orderHeader.PaymentStatus == SD.PaymentStatusDelayedPayment)
+        {
+            // company's order
+            var service = new SessionService();
+            Session session = service.Get(id: orderHeader.SessionId);
+
+            if (String.Equals(session.PaymentStatus, "paid", StringComparison.CurrentCultureIgnoreCase))
+            {
+                _unitOfWork.OrderHeader.UpdateStripePaymentID(
+                    id: orderHeaderId,
+                    sessionId: session.Id,
+                    paymentIntentId: session.PaymentIntentId
+                );
+
+                _unitOfWork.OrderHeader.UpdateStatus(
+                    id: orderHeaderId,
+                    orderStatus: orderHeader.OrderStatus ?? SD.StatusShipped,
+                    paymentStatus: SD.PaymentStatusApproved
+                );
+
+                await _unitOfWork.Save();
+            }
+        }
+
+        return View(orderHeaderId);
+    }
+
     #region API CALLS
 
     [HttpGet]
@@ -173,7 +218,6 @@ public class OrderController : Controller
     #endregion
 
     #region PRIVATE METHODS
-
     private string? GetLoggedUserId()
     {
         // Get logged user
@@ -182,14 +226,14 @@ public class OrderController : Controller
 
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogError("User ID not found!");
+            _logger.LogError(message: LogExceptionMessages.UserIdNotFoundException);
             return null;
         }
 
         return userId;
     }
 
-    private async Task<OrderHeader?> GetOrderHeaderByOrderId(int orderId)
+    private async Task<OrderHeader?> GetOrderHeaderById(int orderId)
     {
         var orderHeader = await _unitOfWork.OrderHeader.Get(
             filter: u => u.Id == orderId,
@@ -205,7 +249,7 @@ public class OrderController : Controller
         return orderHeader;
     }
 
-    private async Task<IEnumerable<OrderDetail>?> GetOrderDetailListByOrderId(int orderId, int page = 1, int pageSize = 10)
+    private async Task<IEnumerable<OrderDetail>?> GetOrderDetailListByOrderHeaderId(int orderId, int page = 1, int pageSize = 10)
     {
         var orderDetailList = await _unitOfWork.OrderDetail.GetAll(
             filter: u => u.OrderHeaderId == orderId,
@@ -340,6 +384,56 @@ public class OrderController : Controller
         );
 
         return Expression.Lambda<Func<OrderHeader, bool>>(combined, parameter);
+    }
+
+    private async Task<StatusCodeResult> CreatePaymentSession()
+    {
+        //var domain = "https://localhost:7014/";
+        var domain = Request.Scheme + "://" + Request.Host.Value + "/";
+        string currency = GetLocalCurrency();
+
+        var lineItems = OrderVM.OrderDetailList.Select(item => new SessionLineItemOptions
+        {
+            PriceData = new SessionLineItemPriceDataOptions
+            {
+                UnitAmount = (long)(item.Price * 100), // $20.50 => 2050
+                Currency = currency,
+                ProductData = new SessionLineItemPriceDataProductDataOptions
+                {
+                    Name = item.Product.Title
+                }
+            },
+            Quantity = item.Count
+        }).ToList();
+
+        var options = new SessionCreateOptions
+        {
+            SuccessUrl = domain + $"admin/order/PaymentConfirmation?orderHeaderId={OrderVM.OrderHeader.Id}",
+            CancelUrl = domain + $"admin/order/details?orderId={OrderVM.OrderHeader.Id}",
+            LineItems = lineItems,
+            Mode = "payment",
+        };
+
+        var service = new SessionService();
+        Session session = service.Create(options: options);
+
+        _unitOfWork.OrderHeader.UpdateStripePaymentID(
+            id: OrderVM.OrderHeader.Id,
+            sessionId: session.Id,
+            paymentIntentId: session.PaymentIntentId
+        );
+
+        await _unitOfWork.Save();
+        Response.Headers.Append("Location", session.Url);
+
+        return new StatusCodeResult(statusCode: (int)HttpStatusCode.RedirectMethod);
+    }
+
+    private static string GetLocalCurrency()
+    {
+        var cultureInfo = CultureInfo.CurrentCulture;
+        var regionInfo = new RegionInfo(cultureInfo.Name);
+        return regionInfo.ISOCurrencySymbol.ToLower();
     }
 
     #endregion

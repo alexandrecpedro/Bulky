@@ -313,7 +313,7 @@ public class CartController : Controller
             [false] = OrderStatusManagement.orderStatusCustomer[OrderStatusManagement.Makes_Payment],
 
             // company user
-            [true] = OrderStatusManagement.orderStatusCompany[OrderStatusManagement.Makes_Payment]
+            [true] = OrderStatusManagement.orderStatusCompany[OrderStatusManagement.Order_Confirmation]
         };
 
         (ShoppingCartVM.OrderHeader.PaymentStatus, ShoppingCartVM.OrderHeader.OrderStatus) = statusMapping[isCompanyUser];
