@@ -1,5 +1,6 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Utility;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
@@ -37,6 +38,7 @@ public class CompanyController : Controller
 
             if (companyFromDb is null)
             {
+                _logger.LogError(message: LogExceptionMessages.CompanyNotFoundException);
                 return NotFound();
             }
 
@@ -58,17 +60,17 @@ public class CompanyController : Controller
             if (company.Id is 0)
             {
                 await _unitOfWork.Company.Add(company);
-                successMessage = "Company created successfully!";
+                successMessage = SuccessDataMessages.CompanyCreatedSuccess;
             }
             else
             {
                 _unitOfWork.Company.Update(company);
-                successMessage = "Company updated successfully!";
+                successMessage = SuccessDataMessages.CompanyUpdatedSuccess;
             }
 
             await _unitOfWork.Save();
             TempData["success"] = successMessage;
-            return RedirectToAction("Index");
+            return RedirectToAction(actionName: nameof(Index));
         }
 
         return View(company);
@@ -95,13 +97,13 @@ public class CompanyController : Controller
 
         if (companyToBeDeleted is null)
         {
-            return Json(new { success = false, message = "Error while deleting" });
+            return Json(new { success = false, message = LogExceptionMessages.CompanyDeleteException });
         }
 
         _unitOfWork.Company.Remove(companyToBeDeleted);
         await _unitOfWork.Save();
 
-        return Json(new { success = true, message = "Deleted successfully!" });
+        return Json(new { success = true, message = SuccessDataMessages.CategoryDeletedSuccess });
     }
 
     #endregion

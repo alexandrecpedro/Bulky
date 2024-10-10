@@ -90,10 +90,7 @@ public class CartController : Controller
         }
 
         var user = await GetUserById(applicationUserId: userId);
-        if (user is null)
-        {
-            return Unauthorized();
-        }
+        if (user is null) return Unauthorized();
 
         var shoppingCartList = await GetShoppingCartList(
             applicationUserId: userId, 
@@ -153,14 +150,14 @@ public class CartController : Controller
 
         if (cartFromDb is null)
         {
-            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
             return NotFound();
         }
 
         cartFromDb.Count += 1;
         _unitOfWork.ShoppingCart.Update(cartFromDb);
 
-        TempData["success"] = "Cart updated successfully!";
+        TempData["success"] = SuccessDataMessages.ShoppingCartUpdatedSuccess;
 
         await _unitOfWork.Save();
 
@@ -174,7 +171,7 @@ public class CartController : Controller
 
         if (cartFromDb is null)
         {
-            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
             return NotFound();
         }
 
@@ -186,7 +183,7 @@ public class CartController : Controller
         cartFromDb.Count -= 1;
         _unitOfWork.ShoppingCart.Update(cartFromDb);
 
-        TempData["success"] = "Cart updated successfully!";
+        TempData["success"] = SuccessDataMessages.ShoppingCartUpdatedSuccess;
 
         await _unitOfWork.Save();
 
@@ -201,13 +198,13 @@ public class CartController : Controller
 
         if (cartFromDb is null)
         {
-            _logger.LogError($"Shopping cart ID {cartId} not found!");
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
             return NotFound();
         }
 
         _unitOfWork.ShoppingCart.Remove(cartFromDb);
 
-        TempData["success"] = "Cart removed successfully!";
+        TempData["success"] = SuccessDataMessages.ShoppingCartDeletedSuccess;
 
         await _unitOfWork.Save();
         return RedirectToAction(nameof(Index));
@@ -222,7 +219,7 @@ public class CartController : Controller
 
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogError("User ID not found!");
+            _logger.LogError(message: LogExceptionMessages.UserIdNotFoundException);
             return null;
         }
 
@@ -233,14 +230,14 @@ public class CartController : Controller
     {
         if (string.IsNullOrWhiteSpace(applicationUserId))
         {
-            _logger.LogError($"Invalid user ID {applicationUserId}!");
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
             return null;
         }
         
         var user = await _unitOfWork.ApplicationUser.Get(filter: u => u.Id == applicationUserId);
         if (user is null)
         {
-            _logger.LogError("User not found!");
+            _logger.LogError(message: LogExceptionMessages.UserNotFoundException);
             return null;
         }
 
@@ -257,7 +254,7 @@ public class CartController : Controller
 
         if (shoppingCarts is null || !shoppingCarts.Any())
         {
-            _logger.LogError($"Shopping cart not found!");
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartNotFoundException);
             return [];
         }
 
@@ -389,7 +386,7 @@ public class CartController : Controller
     {
         if (orderId == 0)
         {
-            _logger.LogError($"Order ID {orderId} not found!");
+            _logger.LogError(message: LogExceptionMessages.OrderIdNotFoundException);
             return null;
         }
 
@@ -397,7 +394,7 @@ public class CartController : Controller
 
         if (orderHeader is null)
         {
-            _logger.LogError($"Order not found!");
+            _logger.LogError(message: LogExceptionMessages.OrderNotFoundException);
             return null;
         }
 

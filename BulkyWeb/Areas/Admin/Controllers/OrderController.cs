@@ -4,14 +4,14 @@ using Bulky.Models.ViewModels;
 using Bulky.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Security.Claims;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
 
 [Area("Admin")]
-//[Authorize(Roles = nameof(RoleEnum.Admin))]
+[Authorize]
 public class OrderController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -70,18 +70,56 @@ public class OrderController : Controller
         var orderHeaderFromDb = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
         if (orderHeaderFromDb is null)
         {
-            _logger.LogError($"Order header not found!");
+            _logger.LogError(message: LogExceptionMessages.OrderHeaderNotFoundException);
             return BadRequest();
         }
 
-        orderHeaderFromDb = MapProperties(orderHeader: orderHeaderFromDb);
+        orderHeaderFromDb = MapProperties(orderHeader: orderHeaderFromDb, orderStep: nameof(UpdateOrderDetail));
 
         _unitOfWork.OrderHeader.Update(orderHeaderFromDb);
         await _unitOfWork.Save();
 
-        TempData["Success"] = "Order details updated successfully!";
+        TempData["Success"] = SuccessDataMessages.OrderDetailUpdatedSuccess;
 
         return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = SD.Role_Admin_Employee)]
+    public async Task<IActionResult> StartProcessing()
+    {
+        _logger.LogInformation("Starting order processing...");
+
+        _unitOfWork.OrderHeader.UpdateStatus(
+            id: OrderVM.OrderHeader.Id,
+            orderStatus: SD.StatusInProcess
+        );
+        await _unitOfWork.Save();
+
+        TempData["Success"] = SuccessDataMessages.OrderDetailUpdatedSuccess;
+        return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = SD.Role_Admin_Employee)]
+    public async Task<IActionResult> ShipOrder()
+    {
+        OrderHeader? orderHeader = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
+        if (orderHeader is null) return NotFound();
+
+        orderHeader = MapProperties(orderHeader: orderHeader, orderStep: nameof(ShipOrder));
+
+        if (string.IsNullOrWhiteSpace(orderHeader.Carrier) || string.IsNullOrWhiteSpace(orderHeader.TrackingNumber))
+        {
+            _logger.LogWarning(message: LogExceptionMessages.OrderHeaderInvalidDataException);
+            return BadRequest();
+        }
+
+        _unitOfWork.OrderHeader.Update(orderHeader);
+        await _unitOfWork.Save();
+
+        TempData["Success"] = SuccessDataMessages.OrderShippedSuccess;
+        return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
     }
 
     #region API CALLS
@@ -95,14 +133,14 @@ public class OrderController : Controller
             status: status,
             page: page,
             pageSize: pageSize
-        ); 
+        );
 
         return Json(new { data = objOrderHeaderList });
     }
 
     #endregion
 
-    #region Private Methods
+    #region PRIVATE METHODS
 
     private string? GetLoggedUserId()
     {
@@ -128,7 +166,7 @@ public class OrderController : Controller
 
         if (orderHeader is null)
         {
-            _logger.LogError("Order header not found!");
+            _logger.LogError(message: LogExceptionMessages.OrderHeaderNotFoundException);
             return null;
         }
 
@@ -146,34 +184,63 @@ public class OrderController : Controller
 
         if (orderDetailList is null || !orderDetailList.Any())
         {
-            _logger.LogError("Order detail list not found!");
+            _logger.LogError(message: LogExceptionMessages.OrderDetailListNotFoundException);
             return null;
         }
 
         return orderDetailList;
     }
 
-    private OrderHeader MapProperties(OrderHeader orderHeader)
+    private OrderHeader MapProperties(OrderHeader orderHeader, string orderStep)
     {
-        orderHeader.Name = OrderVM.OrderHeader.Name;
-        orderHeader.PhoneNumber = OrderVM.OrderHeader.PhoneNumber;
-        orderHeader.StreetAddress = OrderVM.OrderHeader.StreetAddress;
-        orderHeader.City = OrderVM.OrderHeader.City;
-        orderHeader.State = OrderVM.OrderHeader.State;
-        orderHeader.PostalCode = OrderVM.OrderHeader.PostalCode;
+        MapProperty(orderHeader, o => o.Name, OrderVM.OrderHeader.Name);
+        MapProperty(orderHeader, o => o.PhoneNumber, OrderVM.OrderHeader.PhoneNumber);
+        MapProperty(orderHeader, o => o.StreetAddress, OrderVM.OrderHeader.StreetAddress);
+        MapProperty(orderHeader, o => o.City, OrderVM.OrderHeader.City);
+        MapProperty(orderHeader, o => o.State, OrderVM.OrderHeader.State);
+        MapProperty(orderHeader, o => o.PostalCode, OrderVM.OrderHeader.PostalCode);
+        MapProperty(orderHeader, o => o.Carrier, OrderVM.OrderHeader.Carrier);
+        MapProperty(orderHeader, o => o.TrackingNumber, OrderVM.OrderHeader.TrackingNumber);
 
-        orderHeader.Carrier = !string.IsNullOrWhiteSpace(OrderVM.OrderHeader.Carrier)
-            ? OrderVM.OrderHeader.Carrier
-            : orderHeader.Carrier;
-
-        orderHeader.Carrier = !string.IsNullOrWhiteSpace(OrderVM.OrderHeader.TrackingNumber)
-            ? OrderVM.OrderHeader.TrackingNumber
-            : orderHeader.TrackingNumber;
+        if (orderStep.Trim() == nameof(ShipOrder))
+        {
+            MapProperty(orderHeader, o => o.OrderStatus, SD.StatusShipped);
+            MapProperty(orderHeader, o => o.ShippingDate, DateTime.UtcNow);
+            if (orderHeader.PaymentStatus == SD.PaymentStatusDelayedPayment)
+            {
+                orderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+            }
+        }
 
         return orderHeader;
     }
 
-    private async Task<IEnumerable<OrderHeader>?> GetFilteredOrderHeaders(string status, int page, int pageSize)
+    private void MapProperty<T>(OrderHeader target, Expression<Func<OrderHeader, T>> targetPropertyExpression, T newValue)
+    {
+        if (newValue == null) return;
+
+        var memberExpression = (MemberExpression)targetPropertyExpression.Body;
+        var propertyInfo = (PropertyInfo)memberExpression.Member;
+
+        var currentValue = propertyInfo.GetValue(target);
+
+        if (currentValue is null || !EqualityComparer<T>.Default.Equals((T)currentValue, newValue))
+        {
+            propertyInfo.SetValue(target, newValue);
+        }
+    }
+
+    private object? GetTargetObject(MemberExpression memberExpression)
+    {
+        return memberExpression.Expression switch
+        {
+            ConstantExpression constantExpression => constantExpression.Value,
+            MemberExpression innerMemberExpression => Expression.Lambda(innerMemberExpression).Compile().DynamicInvoke(),
+            _ => null
+        };
+    }
+
+    private async Task<IEnumerable<OrderHeader>> GetFilteredOrderHeaders(string status, int page, int pageSize)
     {
         Expression<Func<OrderHeader, bool>> orderFilter = GetOrderFilter(status: status);
 
@@ -188,13 +255,7 @@ public class OrderController : Controller
             includeProperties: "ApplicationUser"
         );
 
-        if (orderHeaderList is null)
-        {
-            _logger.LogError("Order header list not found!");
-            return null;
-        }
-
-        return orderHeaderList;
+        return orderHeaderList ?? [];
     }
 
     private Expression<Func<OrderHeader, bool>> GetOrderFilter(string status)
@@ -213,7 +274,7 @@ public class OrderController : Controller
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            _logger.LogError("User ID not found!");
+            _logger.LogError(message: LogExceptionMessages.UserIdNotFoundException);
             return u => false;
         }
         return u => u.ApplicationUserId == userId;
@@ -221,7 +282,7 @@ public class OrderController : Controller
 
     private Expression<Func<OrderHeader, bool>> GetStatusFilter(string status)
     {
-        var objOrderHeaderListFilter = new Dictionary<string, Expression<Func<OrderHeader, bool>>>
+        var filters = new Dictionary<string, Expression<Func<OrderHeader, bool>>>
         {
             ["pending"] = (u => u.PaymentStatus == SD.PaymentStatusDelayedPayment),
             ["inprocess"] = (u => u.OrderStatus == SD.StatusInProcess),
@@ -229,7 +290,7 @@ public class OrderController : Controller
             ["approved"] = (u => u.OrderStatus == SD.StatusApproved)
         };
 
-        return objOrderHeaderListFilter.TryGetValue(status, out var filterExpression)
+        return filters.TryGetValue(status, out var filterExpression)
             ? filterExpression
             : u => true;
     }

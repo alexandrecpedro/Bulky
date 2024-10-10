@@ -1,6 +1,7 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
 using Bulky.Models.ViewModels;
+using Bulky.Utility;
 using Bulky.Utility.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +57,7 @@ public class ProductController : Controller
 
             if (productFromDb == null)
             {
+                _logger.LogError(message: LogExceptionMessages.ProductNotFoundException);
                 return NotFound();
             }
 
@@ -105,17 +107,17 @@ public class ProductController : Controller
             if (productVM.Product.Id == 0)
             {
                 await _unitOfWork.Product.Add(productVM.Product);
-                successMessage = "Product created successfully!";
+                successMessage = SuccessDataMessages.ProductCreatedSuccess;
             }
             else
             {
                 _unitOfWork.Product.Update(productVM.Product);
-                successMessage = "Product updated successfully!";
+                successMessage = SuccessDataMessages.ProductUpdatedSuccess;
             }
             
             await _unitOfWork.Save();
             TempData["success"] = successMessage;
-            return RedirectToAction("Index");
+            return RedirectToAction(actionName: nameof(Index));
         }
 
         var categoryListAsync = await _unitOfWork.Category.GetAll();
@@ -149,7 +151,7 @@ public class ProductController : Controller
 
         if (productToBeDeleted == null)
         {
-            return Json(new { success = false, message = "Error while deleting" });
+            return Json(new { success = false, message = LogExceptionMessages.ProductNotFoundException });
         }
 
         // remove old image
@@ -165,7 +167,7 @@ public class ProductController : Controller
         _unitOfWork.Product.Remove(productToBeDeleted);
         await _unitOfWork.Save();
 
-        return Json(new { success = true, message = "Deleted successfully!" });
+        return Json(new { success = true, message = SuccessDataMessages.ProductDeletedSuccess });
     }
 
     #endregion

@@ -1,5 +1,6 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Utility;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
@@ -17,7 +18,7 @@ public class CategoryController : Controller
     }
     public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
     {
-        _logger.LogInformation("Starting category search all...");
+        _logger.LogInformation(message: "Starting category search all...");
 
         IEnumerable<Category> objCategoryList = await _unitOfWork.Category.GetAll(page: page, pageSize: pageSize);
 
@@ -26,7 +27,7 @@ public class CategoryController : Controller
 
     public IActionResult Create()
     {
-        _logger.LogInformation("Starting category creation form...");
+        _logger.LogInformation(message: "Starting category creation form...");
 
         return View();
     }
@@ -34,7 +35,7 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
-        _logger.LogInformation("Starting category creation...");
+        _logger.LogInformation(message: "Starting category creation...");
 
         if (category.Name == category.DisplayOrder.ToString())
         {
@@ -48,8 +49,8 @@ public class CategoryController : Controller
         {
             await _unitOfWork.Category.Add(category);
             await _unitOfWork.Save();
-            TempData["success"] = "Category created successfully!";
-            return RedirectToAction("Index");
+            TempData["success"] = SuccessDataMessages.CategoryCreatedSuccess;
+            return RedirectToAction(actionName: nameof(Index));
         }
 
         return View();
@@ -57,10 +58,11 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Edit(int? id)
     {
-        _logger.LogInformation("Starting category edit form...");
+        _logger.LogInformation(message: "Starting category edit form...");
 
         if (id == null || id == 0)
         {
+            _logger.LogError(message: LogExceptionMessages.CategoryIdNotFoundException);
             return NotFound();
         }
         Category? categoryFromDb = await _unitOfWork.Category.Get(u => u.Id == id);
@@ -69,6 +71,7 @@ public class CategoryController : Controller
 
         if (categoryFromDb == null)
         {
+            _logger.LogError(message: LogExceptionMessages.CategoryNotFoundException);
             return NotFound();
         }
         return View(categoryFromDb);
@@ -77,7 +80,7 @@ public class CategoryController : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(Category category)
     {
-        _logger.LogInformation("Starting category update...");
+        _logger.LogInformation(message: "Starting category update...");
 
         if (category.Name == category.DisplayOrder.ToString())
         {
@@ -91,8 +94,8 @@ public class CategoryController : Controller
         {
             _unitOfWork.Category.Update(category);
             await _unitOfWork.Save();
-            TempData["success"] = "Category updated successfully!";
-            return RedirectToAction("Index");
+            TempData["success"] = SuccessDataMessages.CategoryUpdatedSuccess;
+            return RedirectToAction(actionName: nameof(Index));
         }
 
         return View();
@@ -100,10 +103,11 @@ public class CategoryController : Controller
 
     public async Task<IActionResult> Delete(int? id)
     {
-        _logger.LogInformation("Starting category search by id to delete...");
+        _logger.LogInformation(message: "Starting category search by id to delete...");
 
         if (id == null || id == 0)
         {
+            _logger.LogError(message: LogExceptionMessages.CategoryIdNotFoundException);
             return NotFound();
         }
         Category? categoryFromDb = await _unitOfWork.Category.Get(u => u.Id == id);
@@ -112,6 +116,7 @@ public class CategoryController : Controller
 
         if (categoryFromDb == null)
         {
+            _logger.LogError(message: LogExceptionMessages.CategoryNotFoundException);
             return NotFound();
         }
         return View(categoryFromDb);
@@ -125,12 +130,13 @@ public class CategoryController : Controller
         Category? categoryFromDb = await _unitOfWork.Category.Get(u => u.Id == id);
         if (categoryFromDb == null)
         {
+            _logger.LogError(message: LogExceptionMessages.CategoryNotFoundException);
             return NotFound();
         }
 
         _unitOfWork.Category.Remove(categoryFromDb);
         await _unitOfWork.Save();
-        TempData["success"] = "Category deleted successfully";
-        return RedirectToAction("Index");
+        TempData["success"] = SuccessDataMessages.CategoryDeletedSuccess;
+        return RedirectToAction(actionName: nameof(Index));
     }
 }
