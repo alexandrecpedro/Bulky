@@ -4,6 +4,7 @@ using Bulky.Models.ViewModels;
 using Bulky.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
@@ -109,16 +110,47 @@ public class OrderController : Controller
 
         orderHeader = MapProperties(orderHeader: orderHeader, orderStep: nameof(ShipOrder));
 
-        if (string.IsNullOrWhiteSpace(orderHeader.Carrier) || string.IsNullOrWhiteSpace(orderHeader.TrackingNumber))
-        {
-            _logger.LogWarning(message: LogExceptionMessages.OrderHeaderInvalidDataException);
-            return BadRequest();
-        }
+        //if (string.IsNullOrWhiteSpace(orderHeader.Carrier) || string.IsNullOrWhiteSpace(orderHeader.TrackingNumber))
+        //{
+        //    _logger.LogWarning(message: LogExceptionMessages.OrderHeaderInvalidDataException);
+        //    return BadRequest();
+        //}
 
         _unitOfWork.OrderHeader.Update(orderHeader);
         await _unitOfWork.Save();
 
         TempData["Success"] = SuccessDataMessages.OrderShippedSuccess;
+        return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = SD.Role_Admin_Employee)]
+    public async Task<IActionResult> CancelOrder()
+    {
+        OrderHeader? orderHeader = await GetOrderHeaderByOrderId(orderId: OrderVM.OrderHeader.Id);
+        if (orderHeader is null) return NotFound();
+
+        var paymentStatus = (orderHeader.PaymentStatus != SD.PaymentStatusApproved) 
+            ? SD.StatusRefunded
+            : SD.StatusCancelled;
+
+        var options = new RefundCreateOptions
+        {
+            Reason = RefundReasons.RequestedByCustomer,
+            PaymentIntent = orderHeader.PaymentIntentId
+        };
+
+        var service = new RefundService();
+        Refund refund = service.Create(options: options);
+
+        _unitOfWork.OrderHeader.UpdateStatus(
+            id: orderHeader.Id,
+            orderStatus: SD.StatusCancelled,
+            paymentStatus: paymentStatus
+        );
+        await _unitOfWork.Save();
+
+        TempData["success"] = SuccessDataMessages.OrderCancelledSuccess;
         return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
     }
 
