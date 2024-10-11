@@ -15,7 +15,7 @@ public static class Extensions
         services.AddInfrastructure(configuration: configuration);
         services.AddRazorPages();
         services.ConfigureStripe(configuration: configuration);
-        //services.ConfigureAuthentication(configuration: configuration);
+        services.ConfigureAuthentication(configuration: configuration);
         services.ConfigureCookies();
         services.AddSessionConfiguration();
         services.AddRateLimiter();
@@ -31,18 +31,20 @@ public static class Extensions
         StripeConfiguration.ApiKey = configuration.GetSection("Stripe:SecretKey").Get<string>();
     }
 
-    //public static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
-    //{
-    //    services.AddAuthentication().AddFacebook(option => {
-    //        option.AppId = configuration["Authentication:Facebook:AppId"];
-    //        option.AppSecret = configuration["Authentication:Facebook:AppSecret"];
-    //    });
+    public static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddAuthentication().AddFacebook(option =>
+        {
+            option.AppId = configuration["Authentication:Facebook:AppId"] ?? "";
+            option.AppSecret = configuration["Authentication:Facebook:AppSecret"] ?? "";
+        });
 
-    //    services.AddAuthentication().AddMicrosoftAccount(option => {
-    //        option.ClientId = configuration["Authentication:Microsoft:ClientId"];
-    //        option.ClientSecret = configuration["Authentication:Microsoft:ClientSecret"];
-    //    });
-    //}
+        //services.AddAuthentication().AddMicrosoftAccount(option =>
+        //{
+        //    option.ClientId = configuration["Authentication:Microsoft:ClientId"] ?? "";
+        //    option.ClientSecret = configuration["Authentication:Microsoft:ClientSecret"] ?? "";
+        //});
+    }
 
     public static void ConfigureCookies(this IServiceCollection services)
     {
