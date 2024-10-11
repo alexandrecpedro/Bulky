@@ -23,6 +23,7 @@ public static class LogExceptionMessages
     public static readonly string OrderHeaderNotFoundException = "Order header not found!";
 
     // Product
+    public static readonly string ProductIdNotFoundException = "Product ID not found!";
     public static readonly string ProductNotFoundException = "Product not found!";
 
     // ShoppingCart

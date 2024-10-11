@@ -1,5 +1,8 @@
 using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Models.ViewModels;
+using Bulky.Utility;
+using Bulky.Utility.Messages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -55,14 +58,8 @@ public class HomeController : Controller
         _logger.LogInformation("Starting shopping cart add product...");
 
         // Get logged user
-        var claimsIdentity = (ClaimsIdentity)User.Identity;
-        var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            _logger.LogWarning("User ID not found!");
-            return Unauthorized();
-        }
+        var userId = GetLoggedUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
         shoppingCart.ApplicationUserId = userId;
 
@@ -70,14 +67,14 @@ public class HomeController : Controller
 
         if (product == null)
         {
-            _logger.LogWarning($"Product with ID {shoppingCart.ProductId} not found!");
+            _logger.LogError(message: LogExceptionMessages.ProductIdNotFoundException);
             return NotFound();
         }
 
         Category? category = await _unitOfWork.Category.Get(filter: u => u.Id == product.CategoryId);
         if (category == null)
         {
-            _logger.LogWarning($"Category with ID {product.CategoryId} not found!");
+            _logger.LogError(message: LogExceptionMessages.CategoryIdNotFoundException);
             return NotFound();
         }
 
@@ -85,20 +82,14 @@ public class HomeController : Controller
 
         if (cartFromDb != null)
         {
-            //shoppingCart cart exists
-            _logger.LogInformation($"Updating existing shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
-            cartFromDb.Count += shoppingCart.Count;
-            _unitOfWork.ShoppingCart.Update(cartFromDb);
+            await UpdateShoppingCart(userId: userId, shoppingCart: shoppingCart, cartFromDb: cartFromDb);
         }
         else
         {
-            _logger.LogInformation($"Adding new shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
-            await _unitOfWork.ShoppingCart.Add(shoppingCart);
+            await AddShoppingCart(userId: userId, shoppingCart: shoppingCart);
         }
 
         TempData["success"] = "Cart updated successfully!";
-
-        await _unitOfWork.Save();
 
         return RedirectToAction(nameof(Index));
     }
@@ -114,4 +105,44 @@ public class HomeController : Controller
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
+
+    #region PRIVATE METHODS
+
+    private string? GetLoggedUserId()
+    {
+        // Get logged user
+        var claimsIdentity = (ClaimsIdentity)User.Identity;
+        var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogError(message: LogExceptionMessages.UserIdNotFoundException);
+            return null;
+        }
+
+        return userId;
+    }
+
+    private async Task UpdateShoppingCart(string userId, ShoppingCart shoppingCart, ShoppingCart cartFromDb)
+    {
+        //shoppingCart cart exists
+        _logger.LogInformation($"Updating existing shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
+        cartFromDb.Count += shoppingCart.Count;
+        _unitOfWork.ShoppingCart.Update(shoppingCart);
+        await _unitOfWork.Save();
+    }
+
+    private async Task AddShoppingCart(string userId, ShoppingCart shoppingCart)
+    {
+        _logger.LogInformation($"Adding new shopping cart for user {userId} with Product ID {shoppingCart.ProductId}!");
+        await _unitOfWork.ShoppingCart.Add(shoppingCart);
+        await _unitOfWork.Save();
+
+        IEnumerable<ShoppingCart>? shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(filter: u => u.ApplicationUserId == userId);
+        if (shoppingCarts is null || !shoppingCarts.Any()) return;
+
+        HttpContext.Session.SetInt32(key: SD.SessionCart, value: shoppingCarts.Count());
+    }
+
+    #endregion
 }
