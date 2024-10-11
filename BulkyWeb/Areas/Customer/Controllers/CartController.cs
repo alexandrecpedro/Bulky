@@ -168,7 +168,10 @@ public class CartController : Controller
     public async Task<IActionResult> Minus(int cartId)
     {
         _logger.LogInformation("Starting reducing product quantity from shopping cart...");
-        var cartFromDb = await _unitOfWork.ShoppingCart.Get(filter: u => u.Id == cartId);
+        var cartFromDb = await _unitOfWork.ShoppingCart.Get(
+            filter: u => u.Id == cartId,
+            tracked: true
+        );
 
         if (cartFromDb is null)
         {
@@ -195,7 +198,10 @@ public class CartController : Controller
     {
         _logger.LogInformation($"Starting removing product from shopping cart...");
 
-        var cartFromDb = await _unitOfWork.ShoppingCart.Get(filter: u => u.Id == cartId);
+        var cartFromDb = await _unitOfWork.ShoppingCart.Get(
+            filter: u => u.Id == cartId,
+            tracked: true
+        );
 
         if (cartFromDb is null)
         {
