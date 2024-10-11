@@ -204,14 +204,15 @@ public class CartController : Controller
         }
 
         _unitOfWork.ShoppingCart.Remove(cartFromDb);
+        await _unitOfWork.Save();
 
         TempData["success"] = SuccessDataMessages.ShoppingCartDeletedSuccess;
 
-        await _unitOfWork.Save();
+        await SetSession(userId: cartFromDb.ApplicationUserId);
         return RedirectToAction(nameof(Index));
     }
 
-    #region Private Methods
+    #region PRIVATE METHODS
     private string? GetLoggedUserId()
     {
         // Get logged user
@@ -455,6 +456,17 @@ public class CartController : Controller
             <= 100 => shoppingCart.Product.Price50,
             _ => shoppingCart.Product.Price100,
         };
+    }
+
+    private async Task SetSession(string userId)
+    {
+        var count = 0;
+
+        IEnumerable<ShoppingCart>? shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(filter: u => u.ApplicationUserId == userId);
+        if (shoppingCarts is not null && shoppingCarts.Any())
+            count = shoppingCarts.Count();
+
+        HttpContext.Session.SetInt32(key: SD.SessionCart, value: count);
     }
 
     #endregion

@@ -26,6 +26,12 @@ public class HomeController : Controller
     {
         _logger.LogInformation("Starting product display...");
 
+        string? claim = GetLoggedUserId();
+        if (claim is not null)
+        {
+            await SetSession(userId: claim);
+        }
+
         IEnumerable<Product> productList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category");
         return View(productList);
     }
@@ -138,10 +144,18 @@ public class HomeController : Controller
         await _unitOfWork.ShoppingCart.Add(shoppingCart);
         await _unitOfWork.Save();
 
-        IEnumerable<ShoppingCart>? shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(filter: u => u.ApplicationUserId == userId);
-        if (shoppingCarts is null || !shoppingCarts.Any()) return;
+        await SetSession(userId: userId);
+    }
 
-        HttpContext.Session.SetInt32(key: SD.SessionCart, value: shoppingCarts.Count());
+    private async Task SetSession(string userId)
+    {
+        var count = 0;
+
+        IEnumerable<ShoppingCart>? shoppingCarts = await _unitOfWork.ShoppingCart.GetAll(filter: u => u.ApplicationUserId == userId);
+        if (shoppingCarts is not null && shoppingCarts.Any())
+            count = shoppingCarts.Count();
+
+        HttpContext.Session.SetInt32(key: SD.SessionCart, value: count);
     }
 
     #endregion
