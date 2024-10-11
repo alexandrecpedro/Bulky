@@ -26,12 +26,6 @@ public class HomeController : Controller
     {
         _logger.LogInformation("Starting product display...");
 
-        string? claim = GetLoggedUserId();
-        if (claim is not null)
-        {
-            await SetSession(userId: claim);
-        }
-
         IEnumerable<Product> productList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category");
         return View(productList);
     }

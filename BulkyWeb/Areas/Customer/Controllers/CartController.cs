@@ -175,7 +175,7 @@ public class CartController : Controller
 
         if (cartFromDb is null)
         {
-            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartNotFoundException);
             return NotFound();
         }
 
@@ -205,7 +205,7 @@ public class CartController : Controller
 
         if (cartFromDb is null)
         {
-            _logger.LogError(message: LogExceptionMessages.ShoppingCartIdNotFoundException);
+            _logger.LogError(message: LogExceptionMessages.ShoppingCartNotFoundException);
             return NotFound();
         }
 
