@@ -1,4 +1,4 @@
-﻿namespace Bulky.Utility;
+﻿namespace Bulky.Utility.Messages;
 
 public static class SuccessDataMessages
 {
@@ -11,7 +11,7 @@ public static class SuccessDataMessages
     public static readonly string CompanyCreatedSuccess = "Company created successfully!";
     public static readonly string CompanyDeletedSuccess = "Company deleted successfully!";
     public static readonly string CompanyUpdatedSuccess = "Company updated successfully!";
-    
+
     // Product
     public static readonly string ProductCreatedSuccess = "Product created successfully!";
     public static readonly string ProductDeletedSuccess = "Product deleted successfully!";
@@ -25,7 +25,7 @@ public static class SuccessDataMessages
 
     // OrderDetail
     public static readonly string OrderDetailUpdatedSuccess = "Order details updated successfully!";
-    
+
     // OrderShipped
     public static readonly string OrderShippedSuccess = "Order shipped successfully!";
 

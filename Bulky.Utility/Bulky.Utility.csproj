@@ -17,6 +17,4 @@
     <PackageReference Include="FluentEmail.Smtp" Version="3.0.2" />-->
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.8" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
-  </ItemGroup>
-
-</Project>
+  </ItemGroup></Project>
