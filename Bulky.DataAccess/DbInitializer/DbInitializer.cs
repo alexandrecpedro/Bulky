@@ -1,10 +1,11 @@
 ﻿using Bulky.DataAccess.Data;
+using Bulky.DataAccess.DbInitializer.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bulky.DataAccess.DbInitializer;
 
-public class DbInitializer
+public class DbInitializer : IDbInitializer
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;

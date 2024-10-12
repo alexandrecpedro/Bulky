@@ -1,4 +1,5 @@
 ﻿using Bulky.DataAccess.Data;
+using Bulky.DataAccess.DbInitializer.Interfaces;
 using Bulky.DataAccess.Extensions;
 using Bulky.DataAccess.Repository;
 using Bulky.DataAccess.Repository.IRepository;
@@ -58,7 +59,7 @@ public static class DependencyInjectionExtension
         services.AddScoped<ICompanyRepository, CompanyRepository>();
 
         // DbInitializer
-        //services.AddScoped<IDbInitializer, DbInitializer>();
+        services.AddScoped<IDbInitializer, DbInitializer.DbInitializer>();
 
         // EmailSender
         services.AddScoped<IEmailSender, EmailSender>();
