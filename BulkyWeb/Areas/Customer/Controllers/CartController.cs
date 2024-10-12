@@ -442,6 +442,8 @@ public class CartController : Controller
             );
 
             await _unitOfWork.Save();
+
+            HttpContext.Session.Clear();
         }
     }
 
