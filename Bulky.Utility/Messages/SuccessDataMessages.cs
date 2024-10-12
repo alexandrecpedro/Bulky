@@ -34,4 +34,6 @@ public static class SuccessDataMessages
     public static readonly string ShoppingCartDeletedSuccess = "Cart removed successfully!";
     public static readonly string ShoppingCartUpdatedSuccess = "Cart updated successfully!";
 
+    // User
+    public static readonly string UserCreatedSuccess = "User created successfully!";
 }
