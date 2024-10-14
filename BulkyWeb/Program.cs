@@ -1,3 +1,4 @@
+using Bulky.DataAccess.DbInitializer.Interfaces;
 using BulkyWeb;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,12 +22,12 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
+//StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe:SecretKey").Get<string>();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
-//SeedDatabase();
+SeedDatabase();
 app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
@@ -34,9 +35,9 @@ app.MapControllerRoute(
 
 app.Run();
 
-//async Task SeedDatabase()
-//{
-//    using var scope = app.Services.CreateScope();
-//    var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
-//    dbInitializer.Initialize();
-//}
+void SeedDatabase()
+{
+    using var scope = app.Services.CreateScope();
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+    dbInitializer.Initialize();
+}

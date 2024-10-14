@@ -36,7 +36,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         foreach (var property in decimalProperties)
         {
-            property.SetColumnType("decimal(65,2)");
+            property.SetColumnType("decimal(38,2)");
         }
     }
 }
