@@ -131,15 +131,16 @@ public class CartController : Controller
         if (!IsCompanyUser(applicationUser: orderHeader.ApplicationUser) && orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
             await HandlePaymentStatus(orderHeader: orderHeader);
 
-        await _emailSender.SendEmailAsync(
-            email: orderHeader.ApplicationUser.Email ?? string.Empty,
-            subject: "New order - Bulky Book",
-            htmlMessage: $"<p>New order created - {orderHeader.Id}</p>"
-        );
 
         var userId = GetLoggedUserId();
         if (string.IsNullOrWhiteSpace(userId)) return NotFound();
 
+        //await _emailSender.SendEmailAsync(
+        //    email: orderHeader.ApplicationUser.Email ?? string.Empty,
+        //    subject: "New order - Bulky Book",
+        //    htmlMessage: $"<p>New order created - {orderHeader.Id}</p>"
+        //);
+        
         IEnumerable<ShoppingCart>? shoppingCartList = await GetShoppingCartList(
             applicationUserId: userId,
             page: page,

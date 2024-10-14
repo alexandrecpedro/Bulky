@@ -17,7 +17,7 @@ public class EmailSender : IEmailSender
         _providerType = configuration.GetValue<string>("EmailSender:EmailProvider:Type") ?? nameof(EmailProviderEnum.MailKit);
     }
 
-    public async Task SendEmailAsync(string email, string subject, string htmlMessage)
+    public Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
         var emailProvider = _emailProviderFactory.CreateProvider(providerType: _providerType);
         var emailSettings = new EmailSettings
@@ -26,7 +26,7 @@ public class EmailSender : IEmailSender
             Subject = subject,
             HtmlMessage = htmlMessage
         };
-        await emailProvider.SendEmailAsync(emailSettings: emailSettings);
+        return emailProvider.SendEmailAsync(emailSettings: emailSettings);
     }
 
 
