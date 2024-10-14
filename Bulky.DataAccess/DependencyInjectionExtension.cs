@@ -3,7 +3,11 @@ using Bulky.DataAccess.DbInitializer.Interfaces;
 using Bulky.DataAccess.Extensions;
 using Bulky.DataAccess.Repository;
 using Bulky.DataAccess.Repository.IRepository;
+using Bulky.Models.Emails;
 using Bulky.Utility;
+using Bulky.Utility.Factories;
+using Bulky.Utility.Providers;
+using Bulky.Utility.Providers.IProvider;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +23,7 @@ public static class DependencyInjectionExtension
         IConfiguration configuration)
     {
         ConfigureIdentity(services: services);
-        //ConfigureEmailAddressOrigin(services: services, configuration: configuration);
+        ConfigureEmailAddressOrigin(services: services, configuration: configuration);
         AddRepositories(services: services);
 
         if (!configuration.IsTestEnvironment())
@@ -35,17 +39,36 @@ public static class DependencyInjectionExtension
             .AddDefaultTokenProviders();
     }
 
-    // FLUENT EMAIL LIBRARY
-    //private static void ConfigureEmailAddressOrigin(this IServiceCollection services, IConfiguration configuration)
-    //{
-    //    var EMAIL_ADDRESS_ORIGIN = configuration.GetConnectionString("EmailAddress:Origin") ?? throw new InvalidOperationException("Connection string 'EmailAddress Origin' not found!");
+    private static void ConfigureEmailAddressOrigin(this IServiceCollection services, IConfiguration configuration)
+    {
+        // FLUENT EMAIL SETTINGS 
+        //    var EMAIL_ADDRESS_ORIGIN = configuration.GetConnectionString("EmailAddress:Origin") ?? throw new InvalidOperationException("Connection string 'EmailAddress Origin' not found!");
 
-    //    //FluentEmail Services
-    //    services
-    //        .AddFluentEmail(EMAIL_ADDRESS_ORIGIN)
-    //        .AddRazorRenderer()
-    //        .AddSmtpSender("localhost", 25);
-    //}
+        //    //FluentEmail Services
+        //    services
+        //        .AddFluentEmail(EMAIL_ADDRESS_ORIGIN)
+        //        .AddRazorRenderer()
+        //        .AddSmtpSender("localhost", 25);
+
+        // MAILKIT SETTINGS 
+        var smtpSettings = new SmtpSettings(
+            SmtpServer: configuration.GetValue<string>("EmailSender:MailKit:SmtpServer") ?? throw new InvalidOperationException("SMTP server not found!"),
+            SmtpPort: configuration.GetValue<int>("EmailSender:MailKit:SmtpPort"),
+            SmtpUser: configuration.GetValue<string>("EmailSender:MailKit:SmtpUser") ?? throw new InvalidOperationException("SMTP username not found!"),
+            SmtpPass: configuration.GetValue<string>("EmailSender:MailKit:SmtpPass") ?? throw new InvalidOperationException("SMTP password not found!"),
+            EmailFrom: configuration.GetValue<string>("EmailSender:MailKit:Origin") ?? throw new InvalidOperationException("Email address origin not found!")
+        );
+
+        services.AddSingleton(implementationInstance: smtpSettings);
+
+        // SEND GRID SETTINGS
+        //var sendGridSettings = new SendGridSettings(
+        //    ApiKey: configuration.GetValue<string>("EmailSender:SendGrid:SecretKey") ?? throw new InvalidOperationException("SendGrid API Key not found!"),
+        //    EmailFrom: configuration.GetValue<string>("EmailSender:SendGrid:Origin") ?? throw new InvalidOperationException("SendGrid email origin not found!")
+        //);
+
+        //services.AddSingleton(implementationInstance: sendGridSettings);
+    }
 
     private static void AddRepositories(IServiceCollection services)
     {
@@ -62,7 +85,9 @@ public static class DependencyInjectionExtension
         services.AddScoped<IDbInitializer, DbInitializer.DbInitializer>();
 
         // EmailSender
-        services.AddScoped<IEmailSender, EmailSender>();
+        services
+            .AddSingleton<EmailProviderFactory>()
+            .AddScoped<IEmailSender, EmailSender>();
 
         // OrderDetail
         services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();

@@ -15,6 +15,11 @@
     <PackageReference Include="FluentEmail.Razor" Version="3.0.2" />
     <PackageReference Include="FluentEmail.SendGrid" Version="3.0.2" />
     <PackageReference Include="FluentEmail.Smtp" Version="3.0.2" />-->
+    <PackageReference Include="MailKit" Version="4.8.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.10" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bulky.Models\Bulky.Models.csproj" />
   </ItemGroup></Project>

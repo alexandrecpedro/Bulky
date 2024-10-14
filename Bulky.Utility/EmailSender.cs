@@ -1,29 +1,34 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using Bulky.Models.Emails;
+using Bulky.Utility.Enum;
+using Bulky.Utility.Factories;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
-using SendGrid;
-using SendGrid.Helpers.Mail;
 
 namespace Bulky.Utility;
 
 public class EmailSender : IEmailSender
 {
-    private string SendGridSecret { get; set; }
-    private string EmailFrom { get; set; }
+    private readonly EmailProviderFactory _emailProviderFactory;
+    private readonly string _providerType;
 
-    public EmailSender(IConfiguration _config)
+    public EmailSender(EmailProviderFactory emailProviderFactory, IConfiguration configuration)
     {
-        SendGridSecret = _config.GetValue<string>("SendGrid:SecretKey") ?? throw new InvalidOperationException("String 'SendGrid Secret' not found!");
-        EmailFrom = _config.GetValue<string>("SendGrid:Origin") ?? throw new InvalidOperationException("String 'SendGrid EmailAddress Origin' not found.");
+        _emailProviderFactory = emailProviderFactory;
+        _providerType = configuration.GetValue<string>("EmailSender:EmailProvider:Type") ?? nameof(EmailProviderEnum.MailKit);
     }
 
-    public Task SendEmailAsync(string email, string subject, string htmlMessage)
+    public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
-        var client = new SendGridClient(SendGridSecret);
-
-        var from = new EmailAddress(email: EmailFrom, name: "Bulky");
-        var to = new EmailAddress(email: email);
-        var message = MailHelper.CreateSingleEmail(from: from, to: to, subject: subject, plainTextContent: "", htmlContent: htmlMessage);
-
-        return client.SendEmailAsync(message);
+        var emailProvider = _emailProviderFactory.CreateProvider(providerType: _providerType);
+        var emailSettings = new EmailSettings
+        {
+            Email = email,
+            Subject = subject,
+            HtmlMessage = htmlMessage
+        };
+        await emailProvider.SendEmailAsync(emailSettings: emailSettings);
     }
+
+
+
 }

@@ -4,6 +4,7 @@ using Bulky.Models.ViewModels;
 using Bulky.Utility;
 using Bulky.Utility.Messages;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Stripe.Checkout;
 using System.Globalization;
@@ -18,13 +19,15 @@ public class CartController : Controller
 {
     private readonly ILogger<CartController> _logger;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailSender _emailSender;
     [BindProperty]
     public ShoppingCartVM ShoppingCartVM { get; set; }
 
-    public CartController(ILogger<CartController> logger, IUnitOfWork unitOfWork)
+    public CartController(ILogger<CartController> logger, IUnitOfWork unitOfWork, IEmailSender emailSender)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
+        _emailSender = emailSender;
     }
 
     public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
@@ -127,6 +130,12 @@ public class CartController : Controller
 
         if (!IsCompanyUser(applicationUser: orderHeader.ApplicationUser) && orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
             await HandlePaymentStatus(orderHeader: orderHeader);
+
+        await _emailSender.SendEmailAsync(
+            email: orderHeader.ApplicationUser.Email ?? string.Empty,
+            subject: "New order - Bulky Book",
+            htmlMessage: $"<p>New order created - {orderHeader.Id}</p>"
+        );
 
         var userId = GetLoggedUserId();
         if (string.IsNullOrWhiteSpace(userId)) return NotFound();
