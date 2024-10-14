@@ -39,7 +39,7 @@ public static class DependencyInjectionExtension
     //private static void ConfigureEmailAddressOrigin(this IServiceCollection services, IConfiguration configuration)
     //{
     //    var EMAIL_ADDRESS_ORIGIN = configuration.GetConnectionString("EmailAddress:Origin") ?? throw new InvalidOperationException("Connection string 'EmailAddress Origin' not found!");
-        
+
     //    //FluentEmail Services
     //    services
     //        .AddFluentEmail(EMAIL_ADDRESS_ORIGIN)
