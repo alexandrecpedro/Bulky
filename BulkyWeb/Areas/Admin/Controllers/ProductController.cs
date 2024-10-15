@@ -36,98 +36,50 @@ public class ProductController : Controller
     {
         _logger.LogInformation("Starting product upsert form...");
 
-        var categoryListAsync = await _unitOfWork.Category.GetAll();
+        ProductVM? productVM = await CreateProductViewModel(id: id);
+        if(productVM is null)
+            return NotFound();
 
-        ProductVM productVM = new()
-        {
-            CategoryList = categoryListAsync.Select(u => new SelectListItem
-                {
-                    Text = u.Name,
-                    Value = u.Id.ToString()
-                }),
-            Product = new Product()
-        };
-
-        // UPDATE
-        if (id != null && id >= 0)
-        {
-            Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
-            //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
-            //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
-
-            if (productFromDb == null)
-            {
-                _logger.LogError(message: LogExceptionMessages.ProductNotFoundException);
-                return NotFound();
-            }
-
-            productVM.Product = productFromDb;
-        }
-
-        // CREATE
         return View(productVM);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Upsert(ProductVM productVM, IFormFile? file)
+    public async Task<IActionResult> Upsert(ProductVM productVM, List<IFormFile>? files)
     {
         _logger.LogInformation("Starting product upsert...");
 
-        if (ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            string wwwRootPath = _webHostEnvironment.WebRootPath;
-            string successMessage;
-
-            if (file != null)
-            {
-                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                string productPath = Path.Combine(wwwRootPath, @"images\product");
-
-                //if (!string.IsNullOrWhiteSpace(productVM.Product.ImageUrl))
-                //{
-                //    // delete the old image
-                //    var resizeOldImageUrlPath = productVM.Product.ImageUrl.TrimStart('\\');
-                //    var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
-
-                //    if (System.IO.File.Exists(oldImagePath))
-                //    {
-                //        System.IO.File.Delete(oldImagePath);
-                //    }
-                //}
-
-                //string fileStreamPath = Path.Combine(productPath, fileName);
-                //using (var fileStream = new FileStream(fileStreamPath, FileMode.Create))
-                //{
-                //    file.CopyTo(fileStream);
-                //}
-
-                //productVM.Product.ImageUrl = @$"\images\product\{fileName}";
-            }
-
-            if (productVM.Product.Id == 0)
-            {
-                await _unitOfWork.Product.Add(productVM.Product);
-                successMessage = SuccessDataMessages.ProductCreatedSuccess;
-            }
-            else
-            {
-                _unitOfWork.Product.Update(productVM.Product);
-                successMessage = SuccessDataMessages.ProductUpdatedSuccess;
-            }
-            
-            await _unitOfWork.Save();
-            TempData["success"] = successMessage;
-            return RedirectToAction(actionName: nameof(Index));
+            var newProductVM = await PopulateCategoryListAsync(productVM: productVM);
+            return View(newProductVM);
         }
 
-        var categoryListAsync = await _unitOfWork.Category.GetAll();
-        productVM.CategoryList = categoryListAsync.Select(u => new SelectListItem
-                {
-                    Text = u.Name,
-                    Value = u.Id.ToString()
-                });
+        string successMessage = productVM.Product.Id == 0
+            ? SuccessDataMessages.ProductCreatedSuccess
+            : SuccessDataMessages.ProductUpdatedSuccess;
+            
 
-        return View(productVM);
+        if (productVM.Product.Id == 0)
+        {
+            await _unitOfWork.Product.Add(productVM.Product);
+        }
+        else
+        {
+            _unitOfWork.Product.Update(productVM.Product);
+        }
+            
+        await _unitOfWork.Save();
+
+        if (files?.Any() == true)
+        {
+            var product = await ProcessUploadedFilesAsync(files: files, product: productVM.Product);
+            productVM.Product = product;
+            _unitOfWork.Product.Update(productVM.Product);
+            await _unitOfWork.Save();
+        }
+
+        TempData["success"] = successMessage;
+        return RedirectToAction(actionName: nameof(Index));
     }
 
     #region API CALLS
@@ -170,5 +122,83 @@ public class ProductController : Controller
         return Json(new { success = true, message = SuccessDataMessages.ProductDeletedSuccess });
     }
 
+    #endregion
+
+    #region PRIVATE METHODS
+    private async Task<Product> ProcessUploadedFilesAsync(List<IFormFile> files, Product product)
+    {
+        string wwwRootPath = _webHostEnvironment.WebRootPath;
+        string productPath = Path.Combine("images", "products", "product-" + product.Id);
+
+        foreach (IFormFile file in files)
+        {
+            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+            string finalPath = Path.Combine(wwwRootPath, productPath);
+
+            if (!Directory.Exists(finalPath))
+                Directory.CreateDirectory(finalPath);
+
+            string fileStreamPath = Path.Combine(finalPath, fileName);
+            using (var fileStream = new FileStream(path: fileStreamPath, mode: FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            ProductImage productImage = new()
+            {
+                ImageUrl = @"\" + productPath + @"\" + fileName,
+                ProductId = product.Id,
+            };
+
+            product.ProductImages ??= new List<ProductImage>();
+            product.ProductImages.Add(productImage);
+        }
+        
+        return product;
+    }
+
+    private async Task<ProductVM> PopulateCategoryListAsync(ProductVM productVM)
+    {
+        var categories = await _unitOfWork.Category.GetAll();
+        productVM.CategoryList = categories.Select(u => new SelectListItem
+        {
+            Text = u.Name,
+            Value = u.Id.ToString()
+        });
+
+        return productVM;
+    }
+
+    private async Task<ProductVM?> CreateProductViewModel(int? id)
+    {
+        var categoryListAsync = await _unitOfWork.Category.GetAll();
+        var productVM = new ProductVM
+        {
+            CategoryList = categoryListAsync.Select(u => new SelectListItem
+            {
+                Text = u.Name,
+                Value = u.Id.ToString()
+            }),
+            Product = new Product()
+        };
+
+        // UPDATE
+        if (id != null && id >= 0)
+        {
+            Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
+            //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
+            //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
+
+            if (productFromDb == null)
+            {
+                _logger.LogError(message: LogExceptionMessages.ProductNotFoundException);
+                return null;
+            }
+
+            productVM.Product = productFromDb;
+        }
+
+        return productVM;
+    }
     #endregion
 }

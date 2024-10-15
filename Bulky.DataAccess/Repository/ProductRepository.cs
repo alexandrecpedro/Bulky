@@ -26,7 +26,8 @@ public class ProductRepository : Repository<Product>, IProductRepository
             productFromDb.Price50 = product.Price50;
             productFromDb.Price100 = product.Price100;
             productFromDb.Description = product.Description;
-            product.CategoryId = product.CategoryId;
+            productFromDb.CategoryId = product.CategoryId;
+            productFromDb.ProductImages = product.ProductImages;
         }
     }
 }
