@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Data\ApplicationDbContext.cs~RF1af828d.TMP" />
+  </ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
@@ -23,9 +27,5 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Bulky.Models\Bulky.Models.csproj" />
 	  <ProjectReference Include="..\Bulky.Utility\Bulky.Utility.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Migrations\" />
 	</ItemGroup>
 </Project>

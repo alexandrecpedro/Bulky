@@ -108,11 +108,11 @@ public static class DependencyInjectionExtension
         var DB_CONNECTION_STRING = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found!");
 
         // POSTGRESQL
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString: DB_CONNECTION_STRING));
+        //services.AddDbContext<ApplicationDbContext>(options =>
+        //    options.UseNpgsql(connectionString: DB_CONNECTION_STRING));
 
         // MS SQL SERVER
-        //services.AddDbContext<ApplicationDbContext>(options => 
-        //    options.UseSqlServer(connectionString: DB_CONNECTION_STRING));
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(connectionString: DB_CONNECTION_STRING));
     }
 }
