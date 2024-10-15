@@ -10,6 +10,9 @@ public static class LogExceptionMessages
     public static readonly string CompanyNotFoundException = "Company not found!";
     public static readonly string CompanyDeleteException = "Error while deleting company!";
 
+    // Operation
+    public static readonly string LockUnlockException = "Error while locking/Unlocking!";
+
     // Order
     public static readonly string OrderIdNotFoundException = "Order ID not found!";
     public static readonly string OrderNotFoundException = "Order not found!";
