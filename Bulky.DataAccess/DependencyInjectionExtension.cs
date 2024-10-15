@@ -6,8 +6,6 @@ using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models.Emails;
 using Bulky.Utility;
 using Bulky.Utility.Factories;
-using Bulky.Utility.Providers;
-using Bulky.Utility.Providers.IProvider;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
