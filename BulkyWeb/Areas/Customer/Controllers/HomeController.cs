@@ -26,7 +26,7 @@ public class HomeController : Controller
     {
         _logger.LogInformation("Starting product display...");
 
-        IEnumerable<Product> productList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category");
+        IEnumerable<Product> productList = await _unitOfWork.Product.GetAll(page: page, pageSize: pageSize, includeProperties: "Category,ProductImages");
         return View(productList);
     }
 
@@ -34,7 +34,7 @@ public class HomeController : Controller
     {
         _logger.LogInformation("Starting details display...");
 
-        Product? product = await _unitOfWork.Product.Get(filter: u => u.Id == productId, includeProperties: "Category");
+        Product? product = await _unitOfWork.Product.Get(filter: u => u.Id == productId, includeProperties: "Category,ProductImages");
 
         if (product == null)
         {

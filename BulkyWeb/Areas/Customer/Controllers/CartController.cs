@@ -276,8 +276,12 @@ public class CartController : Controller
             return [];
         }
 
+        IEnumerable<ProductImage> productImages = await _unitOfWork.ProductImage.GetAll(page: page ?? 1,
+            pageSize: pageSize ?? 10);
+
         return shoppingCarts.Select(cart =>
         {
+            cart.Product.ProductImages = productImages.Where(pi => pi.ProductId == cart.Product.Id).ToList();
             cart.Price = GetPriceBasedOnQuantity(shoppingCart: cart);
             return cart;
         });
