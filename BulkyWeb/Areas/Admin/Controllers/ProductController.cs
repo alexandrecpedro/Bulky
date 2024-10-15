@@ -83,25 +83,25 @@ public class ProductController : Controller
                 string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
                 string productPath = Path.Combine(wwwRootPath, @"images\product");
 
-                if (!string.IsNullOrWhiteSpace(productVM.Product.ImageUrl))
-                {
-                    // delete the old image
-                    var resizeOldImageUrlPath = productVM.Product.ImageUrl.TrimStart('\\');
-                    var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
+                //if (!string.IsNullOrWhiteSpace(productVM.Product.ImageUrl))
+                //{
+                //    // delete the old image
+                //    var resizeOldImageUrlPath = productVM.Product.ImageUrl.TrimStart('\\');
+                //    var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
 
-                    if (System.IO.File.Exists(oldImagePath))
-                    {
-                        System.IO.File.Delete(oldImagePath);
-                    }
-                }
+                //    if (System.IO.File.Exists(oldImagePath))
+                //    {
+                //        System.IO.File.Delete(oldImagePath);
+                //    }
+                //}
 
-                string fileStreamPath = Path.Combine(productPath, fileName);
-                using (var fileStream = new FileStream(fileStreamPath, FileMode.Create))
-                {
-                    file.CopyTo(fileStream);
-                }
+                //string fileStreamPath = Path.Combine(productPath, fileName);
+                //using (var fileStream = new FileStream(fileStreamPath, FileMode.Create))
+                //{
+                //    file.CopyTo(fileStream);
+                //}
 
-                productVM.Product.ImageUrl = @$"\images\product\{fileName}";
+                //productVM.Product.ImageUrl = @$"\images\product\{fileName}";
             }
 
             if (productVM.Product.Id == 0)
@@ -156,13 +156,13 @@ public class ProductController : Controller
 
         // remove old image
         string wwwRootPath = _webHostEnvironment.WebRootPath;
-        var resizeOldImageUrlPath = productToBeDeleted.ImageUrl.TrimStart('\\');
-        var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
+        //var resizeOldImageUrlPath = productToBeDeleted.ImageUrl.TrimStart('\\');
+        //var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
 
-        if (System.IO.File.Exists(oldImagePath))
-        {
-            System.IO.File.Delete(oldImagePath);
-        }
+        //if (System.IO.File.Exists(oldImagePath))
+        //{
+        //    System.IO.File.Delete(oldImagePath);
+        //}
 
         _unitOfWork.Product.Remove(productToBeDeleted);
         await _unitOfWork.Save();
