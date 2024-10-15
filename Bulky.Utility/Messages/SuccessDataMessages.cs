@@ -20,7 +20,7 @@ public static class SuccessDataMessages
     // ProductImage
     public static readonly string ProductImageCreatedSuccess = "Product image created successfully!";
     public static readonly string ProductImageDeletedSuccess = "Product image deleted successfully!";
-    public static readonly string ProductImageUpdatedSuccess = "Product image updated successfully!";
+    //public static readonly string ProductImageUpdatedSuccess = "Product image updated successfully!";
 
     // Order
     public static readonly string OrderCancelledSuccess = "Order cancelled successfully!";

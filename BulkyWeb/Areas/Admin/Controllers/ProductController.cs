@@ -82,6 +82,43 @@ public class ProductController : Controller
         return RedirectToAction(actionName: nameof(Index));
     }
 
+    public async Task<IActionResult> DeleteImage(int imageId)
+    {
+        _logger.LogInformation("Starting deleting product image...");
+
+        if (imageId <= 0)
+        {
+            _logger.LogError(message: LogExceptionMessages.ProductImageIdInvalidDataException);
+            return BadRequest();
+        }
+
+        var productImageToBeDeleted = await _unitOfWork.ProductImage.Get(filter: pi => pi.Id == imageId);
+        int? productId = null;
+
+        if (productImageToBeDeleted is not null)
+        {
+            productId = productImageToBeDeleted.ProductId;
+            if (!string.IsNullOrWhiteSpace(productImageToBeDeleted.ImageUrl))
+            {
+                string wwwRootPath = _webHostEnvironment.WebRootPath;
+                var imagePath = productImageToBeDeleted.ImageUrl.TrimStart('\\');
+                var oldImagePath = Path.Combine(wwwRootPath, imagePath);
+
+                if (System.IO.File.Exists(oldImagePath))
+                {
+                    System.IO.File.Delete(oldImagePath);
+                }
+            }
+
+            _unitOfWork.ProductImage.Remove(productImageToBeDeleted);
+            await _unitOfWork.Save();
+
+            TempData["success"] = SuccessDataMessages.ProductImageDeletedSuccess;
+        }
+
+        return RedirectToAction(nameof(Upsert), new { id = productId });
+    }
+
     #region API CALLS
 
     [HttpGet]
@@ -99,8 +136,7 @@ public class ProductController : Controller
     {
         _logger.LogInformation("Starting product delete...");
 
-        var productToBeDeleted = await _unitOfWork.Product.Get(u => u.Id == id);
-
+        var productToBeDeleted = await _unitOfWork.Product.Get(filter: u => u.Id == id);
         if (productToBeDeleted == null)
         {
             return Json(new { success = false, message = LogExceptionMessages.ProductNotFoundException });
@@ -108,13 +144,19 @@ public class ProductController : Controller
 
         // remove old image
         string wwwRootPath = _webHostEnvironment.WebRootPath;
-        //var resizeOldImageUrlPath = productToBeDeleted.ImageUrl.TrimStart('\\');
-        //var oldImagePath = Path.Combine(wwwRootPath, resizeOldImageUrlPath);
+        string productPath = Path.Combine("images", "products", "product-" + id);
+        var oldImagePath = Path.Combine(wwwRootPath, productPath);
 
-        //if (System.IO.File.Exists(oldImagePath))
-        //{
-        //    System.IO.File.Delete(oldImagePath);
-        //}
+        if (Directory.Exists(path: oldImagePath))
+        {
+            string[] filePaths = Directory.GetFiles(path: oldImagePath);
+            foreach (string filePath in filePaths)
+            {
+                System.IO.File.Delete(filePath);
+                _logger.LogInformation(message: SuccessDataMessages.ProductImageDeletedSuccess);
+            }
+            Directory.Delete(path: oldImagePath);
+        }
 
         _unitOfWork.Product.Remove(productToBeDeleted);
         await _unitOfWork.Save();
@@ -152,6 +194,7 @@ public class ProductController : Controller
 
             product.ProductImages ??= new List<ProductImage>();
             product.ProductImages.Add(productImage);
+            _logger.LogInformation(message: SuccessDataMessages.ProductImageCreatedSuccess);
         }
         
         return product;

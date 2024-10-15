@@ -29,6 +29,9 @@ public static class LogExceptionMessages
     public static readonly string ProductIdNotFoundException = "Product ID not found!";
     public static readonly string ProductNotFoundException = "Product not found!";
 
+    // ProductImage
+    public static readonly string ProductImageIdInvalidDataException = "Invalid product image ID!";
+
     // ShoppingCart
     public static readonly string ShoppingCartIdNotFoundException = "Shopping cart ID not found!";
     public static readonly string ShoppingCartNotFoundException = "Shopping cart not found!";
