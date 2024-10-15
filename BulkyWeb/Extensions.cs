@@ -39,11 +39,11 @@ public static class Extensions
             option.AppSecret = configuration["Authentication:Facebook:AppSecret"] ?? "";
         });
 
-        //services.AddAuthentication().AddMicrosoftAccount(option =>
-        //{
-        //    option.ClientId = configuration["Authentication:Microsoft:ClientId"] ?? "";
-        //    option.ClientSecret = configuration["Authentication:Microsoft:ClientSecret"] ?? "";
-        //});
+        services.AddAuthentication().AddMicrosoftAccount(option =>
+        {
+            option.ClientId = configuration["Authentication:Microsoft:ClientId"] ?? "";
+            option.ClientSecret = configuration["Authentication:Microsoft:ClientSecret"] ?? "";
+        });
     }
 
     public static void ConfigureCookies(this IServiceCollection services)
