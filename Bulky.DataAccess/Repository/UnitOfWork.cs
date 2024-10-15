@@ -18,6 +18,8 @@ public class UnitOfWork : IUnitOfWork
 
     public IProductRepository Product { get; private set; }
 
+    public IProductImageRepository ProductImage { get; private set; }
+
     public IShoppingCartRepository ShoppingCart { get; private set; }
 
     public UnitOfWork(ApplicationDbContext db)
@@ -29,6 +31,7 @@ public class UnitOfWork : IUnitOfWork
         OrderDetail = new OrderDetailRepository(_db);
         OrderHeader = new OrderHeaderRepository(_db);
         Product = new ProductRepository(_db);
+        ProductImage = new ProductImageRepository(_db);
         ShoppingCart = new ShoppingCartRepository(_db);
     }
 

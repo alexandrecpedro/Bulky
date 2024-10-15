@@ -14,6 +14,8 @@ public interface IUnitOfWork
 
     IProductRepository Product { get; }
 
+    IProductImageRepository ProductImage { get; }
+
     IShoppingCartRepository ShoppingCart { get; }
 
     Task Save();
