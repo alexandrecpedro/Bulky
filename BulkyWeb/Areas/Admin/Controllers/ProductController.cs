@@ -185,7 +185,10 @@ public class ProductController : Controller
         // UPDATE
         if (id != null && id >= 0)
         {
-            Product? productFromDb = await _unitOfWork.Product.Get(u => u.Id == id);
+            Product? productFromDb = await _unitOfWork.Product.Get(
+                filter: u => u.Id == id,
+                includeProperties: "ProductImages"
+            );
             //Product? productFromDb1 = _db.Products.FirstOrDefault(u=>u.Id==id);
             //Product? productFromDb2 = _db.Products.Where(u=>u.Id==id).FirstOrDefault();
 
