@@ -36,6 +36,6 @@ public static class SuccessDataMessages
 
     // User
     public static readonly string UserCreatedSuccess = "User created successfully!"; 
-    public static readonly string UserDeletedSuccess = "User deleted successfully!";
+    //public static readonly string UserDeletedSuccess = "User deleted successfully!";
     public static readonly string UserUpdatedSuccess = "User updated successfully!";
 }
