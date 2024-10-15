@@ -1,8 +1,10 @@
 ﻿using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Bulky.Utility;
 using Bulky.Utility.Enum;
 using Bulky.Utility.Messages;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyWeb.Areas.Admin.Controllers;
@@ -11,11 +13,13 @@ namespace BulkyWeb.Areas.Admin.Controllers;
 [Authorize(Roles = nameof(RoleEnum.Admin))]
 public class UserController : Controller
 {
+    private readonly UserManager<IdentityUser> _userManager;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(IUnitOfWork unitOfWork, ILogger<UserController> logger)
+    public UserController(UserManager<IdentityUser> userManager, IUnitOfWork unitOfWork, ILogger<UserController> logger)
     {
+        _userManager = userManager;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -42,12 +46,9 @@ public class UserController : Controller
 
         await Task.WhenAll(objUserList.Select(async user =>
         {
-            //user.Role = ;
+            user.Role = _userManager.GetRolesAsync(user: user).GetAwaiter().GetResult().FirstOrDefault() ?? SD.Role_Customer;
 
-            user.Company ??= new Company
-                {
-                    Name = ""
-                };
+            user.Company ??= new Company { Name = "" };
 
             return user;
         }));
